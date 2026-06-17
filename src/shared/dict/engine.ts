@@ -1,4 +1,4 @@
-import type { Dict, SearchResult } from './types'
+import type { Dict, DictEntry, SearchResult } from './types'
 
 /**
  * カーソル直前テキストから最長一致で候補を検索する。
@@ -18,9 +18,9 @@ export function searchCandidates(
 
   for (let length = tail.length; length >= 1; length--) {
     const reading = tail.slice(-length)
-    const candidates = dict[reading]
-    if (candidates && candidates.length > 0) {
-      return { reading, candidates }
+    const entries = dict[reading]
+    if (entries && entries.length > 0) {
+      return { reading, candidates: entries.map((e) => e.word) }
     }
   }
 
@@ -28,12 +28,15 @@ export function searchCandidates(
 }
 
 /**
- * 候補リストに重複なく候補を追加したものを返す（イミュータブル）。
+ * エントリリストに word をキーとして重複なくマージする（イミュータブル）。
+ * 既存エントリの memo/count は保持し、新規 word のみ { word, memo:'', count:0 } で追加する。
  */
-export function mergeCandidates(existing: string[], additions: string[]): string[] {
+export function mergeEntries(existing: DictEntry[], additions: string[]): DictEntry[] {
   const result = [...existing]
-  for (const c of additions) {
-    if (!result.includes(c)) result.push(c)
+  for (const word of additions) {
+    if (!result.some((e) => e.word === word)) {
+      result.push({ word, memo: '', count: 0 })
+    }
   }
   return result
 }
