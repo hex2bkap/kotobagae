@@ -90,12 +90,16 @@ function App(): JSX.Element {
     const ms = settings.autosave.intervalMinutes * 60 * 1000
     const timer = setInterval(async () => {
       const view = viewRef.current
-      const activeTab = tabsRef.current.find((t) => t.id === activeTabIdRef.current)
-      if (!view || !activeTab || activeTab.missing) return
-      const content = view.state.doc.toString()
-      if (!content.trim()) return
-      const baseName = activeTab.filePath ? basename(activeTab.filePath) : 'untitled'
-      await window.api.autosave.save(content, baseName)
+      const activeId = activeTabIdRef.current
+      for (const tab of tabsRef.current) {
+        if (!tab.dirty || tab.missing) continue
+        const content = tab.id === activeId && view
+          ? view.state.doc.toString()
+          : tab.editorState.doc.toString()
+        if (!content.trim()) continue
+        const baseName = tab.filePath ? basename(tab.filePath) : 'untitled'
+        await window.api.autosave.save(content, baseName)
+      }
     }, ms)
     return () => clearInterval(timer)
   }, [settings?.autosave.enabled, settings?.autosave.intervalMinutes])

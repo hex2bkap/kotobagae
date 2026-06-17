@@ -250,10 +250,13 @@ ipcMain.handle('file:openPath', (_event, filePath: string) => {
 })
 
 ipcMain.handle('file:save', async (_event, filePath: string, content: string) => {
+  const tmp = filePath + '.tmp'
   try {
-    writeFileSync(filePath, content, 'utf-8')
+    writeFileSync(tmp, content, 'utf-8')
+    renameSync(tmp, filePath)
     return { success: true }
   } catch (e) {
+    try { unlinkSync(tmp) } catch { /* 無視 */ }
     return { success: false, error: String(e) }
   }
 })
@@ -267,10 +270,13 @@ ipcMain.handle('file:saveAs', async (_event, content: string) => {
     ]
   })
   if (result.canceled || !result.filePath) return null
+  const tmp = result.filePath + '.tmp'
   try {
-    writeFileSync(result.filePath, content, 'utf-8')
+    writeFileSync(tmp, content, 'utf-8')
+    renameSync(tmp, result.filePath)
     return { path: result.filePath, success: true }
   } catch (e) {
+    try { unlinkSync(tmp) } catch { /* 無視 */ }
     return { path: result.filePath, success: false, error: String(e) }
   }
 })
@@ -304,8 +310,9 @@ ipcMain.handle('session:save', (_event, data: SessionData) => {
 ipcMain.handle('settings:load', () => currentSettings)
 
 ipcMain.handle('settings:save', (_event, s: AppSettings) => {
-  currentSettings = s
-  saveSettings(s)
+  // windowBounds はメインが move/resize で管理する状態。モーダルの値で上書きしない
+  currentSettings = { ...s, windowBounds: currentSettings.windowBounds }
+  saveSettings(currentSettings)
 })
 
 // 自動保存
