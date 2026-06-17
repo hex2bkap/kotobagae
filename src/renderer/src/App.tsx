@@ -5,7 +5,10 @@ import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirro
 import { CandidatePopup } from './components/CandidatePopup'
 import { InputModal } from './components/InputModal'
 import { ConfirmModal } from './components/ConfirmModal'
+import { SettingsModal } from './components/SettingsModal'
+import { AutosaveRestoreModal } from './components/AutosaveRestoreModal'
 import { basename } from './utils/path'
+import type { AppSettings } from '../../shared/settings-types'
 
 const APP_NAME = 'コトバガエ'
 const MAX_SEARCH_LEN = 10
@@ -51,6 +54,9 @@ function App(): JSX.Element {
     onOk: () => void
     onCancel: () => void
   } | null>(null)
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAutosaveRestore, setShowAutosaveRestore] = useState(false)
 
   // callbacks / state への参照を extensions や非同期コールバックから安全に使うための ref 群
   const tabsRef = useRef<Tab[]>(tabs)
@@ -68,6 +74,31 @@ function App(): JSX.Element {
     const name = activeTab.filePath ? basename(activeTab.filePath) : '無題'
     window.api.setTitle(`${APP_NAME} — ${name}${activeTab.dirty ? ' *' : ''}`)
   }, [tabs, activeTabId])
+
+  // ── 設定の読み込み ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    window.api.settings.load().then((s) =>
+      setSettings({ windowBounds: s.windowBounds, autosave: { ...s.autosave } })
+    )
+  }, [])
+
+  // ── 自動保存タイマー（settings が確定してから起動）─────────────────
+
+  useEffect(() => {
+    if (!settings?.autosave.enabled) return
+    const ms = settings.autosave.intervalMinutes * 60 * 1000
+    const timer = setInterval(async () => {
+      const view = viewRef.current
+      const activeTab = tabsRef.current.find((t) => t.id === activeTabIdRef.current)
+      if (!view || !activeTab || activeTab.missing) return
+      const content = view.state.doc.toString()
+      if (!content.trim()) return
+      const baseName = activeTab.filePath ? basename(activeTab.filePath) : 'untitled'
+      await window.api.autosave.save(content, baseName)
+    }, ms)
+    return () => clearInterval(timer)
+  }, [settings?.autosave.enabled, settings?.autosave.intervalMinutes])
 
   // ── 辞書一覧 ──────────────────────────────────────────────────────────
 
@@ -366,6 +397,28 @@ function App(): JSX.Element {
     )
   }, [])
 
+  const handleOpenFromAutosave = useCallback(async (content: string) => {
+    const state = EditorState.create({ doc: content, extensions: extensionsRef.current! })
+    const newTab: Tab = {
+      id: newTabId(), filePath: null, editorState: state,
+      dirty: true, missing: false, dictName: null
+    }
+    const view = viewRef.current
+    const currentId = activeTabIdRef.current
+    const currentState = view?.state
+    setTabs((prev) => {
+      const updated = currentState && currentId
+        ? prev.map((t) => (t.id === currentId ? { ...t, editorState: currentState } : t))
+        : prev
+      return [...updated, newTab]
+    })
+    setActiveTabId(newTab.id)
+    view?.setState(newTab.editorState)
+    await window.api.dict.setActiveDict(null)
+    closePopupRef.current()
+    view?.focus()
+  }, [])
+
   const handleDictChange = useCallback(async (name: string) => {
     const activeId = activeTabIdRef.current
     const newName = name === '' ? null : name
@@ -384,7 +437,9 @@ function App(): JSX.Element {
     const off2 = window.api.onMenuOpen(handleOpen)
     const off3 = window.api.onMenuSave(handleSave)
     const off4 = window.api.onMenuSaveAs(handleSaveAs)
-    return () => { off1(); off2(); off3(); off4() }
+    const off5 = window.api.onMenuSettings(() => setShowSettings(true))
+    const off6 = window.api.onMenuAutosaveRestore(() => setShowAutosaveRestore(true))
+    return () => { off1(); off2(); off3(); off4(); off5(); off6() }
   }, [handleNew, handleOpen, handleSave, handleSaveAs])
 
   // ── 2重起動でファイルを受け取る ───────────────────────────────────────
@@ -688,6 +743,16 @@ function App(): JSX.Element {
           ))}
         </select>
         <span style={{ color: '#aaa', fontSize: '12px' }}>Ctrl+D: 選択テキストを辞書に登録</span>
+        <div style={{ marginLeft: 'auto' }}>
+          <button
+            onClick={() => setShowSettings(true)}
+            title="設定 (Ctrl+,)"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 16, padding: '2px 6px', color: '#555', borderRadius: 3
+            }}
+          >⚙</button>
+        </div>
       </div>
 
       {/* エディタ本体 */}
@@ -741,6 +806,22 @@ function App(): JSX.Element {
           message={confirm.message}
           onOk={confirm.onOk}
           onCancel={confirm.onCancel}
+        />
+      )}
+
+      {/* 設定モーダル */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onSave={(newSettings) => setSettings(newSettings)}
+        />
+      )}
+
+      {/* 自動保存から復元モーダル */}
+      {showAutosaveRestore && (
+        <AutosaveRestoreModal
+          onClose={() => setShowAutosaveRestore(false)}
+          onOpen={handleOpenFromAutosave}
         />
       )}
     </div>

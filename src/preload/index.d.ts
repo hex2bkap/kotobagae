@@ -16,6 +16,18 @@ interface SessionData {
   activeTabIndex: number
 }
 
+interface SettingsData {
+  windowBounds: { x: number; y: number; width: number; height: number } | null
+  autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
+}
+
+interface AutosaveFileInfo {
+  path: string
+  name: string
+  mtime: number
+  preview: string
+}
+
 interface KotobagaeAPI {
   openFile: () => Promise<{ path: string; content: string; encoding: string } | null>
   openFilePath: (filePath: string) => Promise<{ path: string; content: string; encoding: string } | null>
@@ -27,10 +39,22 @@ interface KotobagaeAPI {
   onMenuOpen: (cb: () => void) => () => void
   onMenuSave: (cb: () => void) => () => void
   onMenuSaveAs: (cb: () => void) => () => void
+  onMenuSettings: (cb: () => void) => () => void
+  onMenuAutosaveRestore: (cb: () => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
   loadSession: () => Promise<SessionData | null>
   saveSession: (data: SessionData) => Promise<void>
+  settings: {
+    load: () => Promise<SettingsData>
+    save: (s: SettingsData) => Promise<void>
+  }
+  autosave: {
+    save: (content: string, baseName: string) => Promise<void>
+    list: () => Promise<AutosaveFileInfo[]>
+    open: (filePath: string) => Promise<string | null>
+  }
+  openDataDir: () => void
   dict: {
     listDicts: () => Promise<string[]>
     getActiveDict: () => Promise<string | null>

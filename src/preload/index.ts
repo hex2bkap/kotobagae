@@ -30,7 +30,6 @@ const api = {
     } | null>,
 
   setTitle: (title: string) => ipcRenderer.send('window:setTitle', title),
-
   confirmClose: () => ipcRenderer.send('window:confirmClose'),
 
   onMenuNew: (cb: () => void) => {
@@ -48,6 +47,14 @@ const api = {
   onMenuSaveAs: (cb: () => void) => {
     ipcRenderer.on('menu:saveAs', cb)
     return () => ipcRenderer.removeListener('menu:saveAs', cb)
+  },
+  onMenuSettings: (cb: () => void) => {
+    ipcRenderer.on('menu:settings', cb)
+    return () => ipcRenderer.removeListener('menu:settings', cb)
+  },
+  onMenuAutosaveRestore: (cb: () => void) => {
+    ipcRenderer.on('menu:autosaveRestore', cb)
+    return () => ipcRenderer.removeListener('menu:autosaveRestore', cb)
   },
 
   onBeforeClose: (cb: () => void) => {
@@ -71,6 +78,34 @@ const api = {
     tabs: Array<{ filePath: string | null; cursorPos: number; dictName: string | null }>
     activeTabIndex: number
   }) => ipcRenderer.invoke('session:save', data) as Promise<void>,
+
+  // 設定
+  settings: {
+    load: () =>
+      ipcRenderer.invoke('settings:load') as Promise<{
+        windowBounds: { x: number; y: number; width: number; height: number } | null
+        autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
+      }>,
+    save: (s: {
+      windowBounds: { x: number; y: number; width: number; height: number } | null
+      autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
+    }) => ipcRenderer.invoke('settings:save', s) as Promise<void>
+  },
+
+  // 自動保存
+  autosave: {
+    save: (content: string, baseName: string) =>
+      ipcRenderer.invoke('autosave:save', content, baseName) as Promise<void>,
+    list: () =>
+      ipcRenderer.invoke('autosave:list') as Promise<
+        Array<{ path: string; name: string; mtime: number; preview: string }>
+      >,
+    open: (filePath: string) =>
+      ipcRenderer.invoke('autosave:open', filePath) as Promise<string | null>
+  },
+
+  // Shell
+  openDataDir: () => ipcRenderer.send('shell:openDataDir'),
 
   // 辞書 API
   dict: {
