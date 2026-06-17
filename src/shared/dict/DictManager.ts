@@ -100,6 +100,12 @@ export class DictManager {
     return true
   }
 
+  // ── 辞書データ取得 ─────────────────────────────────────────
+
+  getDictData(name: string): Dict {
+    return this.store[name] ?? {}
+  }
+
   // ── エントリ操作 ────────────────────────────────────────────
 
   addEntry(dictName: string, reading: string, words: string[]): void {
@@ -112,6 +118,58 @@ export class DictManager {
   removeEntry(dictName: string, reading: string): void {
     if (!(dictName in this.store)) return
     delete this.store[dictName][reading]
+    this.saveFile(dictName)
+  }
+
+  updateEntry(
+    dictName: string,
+    reading: string,
+    index: number,
+    patch: { word?: string; memo?: string; count?: number }
+  ): boolean {
+    const entries = this.store[dictName]?.[reading]
+    if (!entries || index < 0 || index >= entries.length) return false
+    if (patch.word !== undefined && patch.word !== entries[index].word) {
+      if (entries.some((e, i) => i !== index && e.word === patch.word)) return false
+    }
+    entries[index] = { ...entries[index], ...patch }
+    this.saveFile(dictName)
+    return true
+  }
+
+  removeCandidate(dictName: string, reading: string, index: number): void {
+    const dict = this.store[dictName]
+    if (!dict) return
+    const entries = dict[reading]
+    if (!entries || index < 0 || index >= entries.length) return
+    entries.splice(index, 1)
+    if (entries.length === 0) delete dict[reading]
+    this.saveFile(dictName)
+  }
+
+  addCandidate(dictName: string, reading: string, word: string): boolean {
+    if (!(dictName in this.store)) return false
+    if (!this.store[dictName][reading]) this.store[dictName][reading] = []
+    const existing = this.store[dictName][reading]
+    if (existing.some((e) => e.word === word)) return false
+    existing.push({ word, memo: '', count: 0 })
+    this.saveFile(dictName)
+    return true
+  }
+
+  renameReading(dictName: string, oldReading: string, newReading: string): boolean {
+    const dict = this.store[dictName]
+    if (!dict || !(oldReading in dict) || newReading in dict) return false
+    dict[newReading] = dict[oldReading]
+    delete dict[oldReading]
+    this.saveFile(dictName)
+    return true
+  }
+
+  removeReading(dictName: string, reading: string): void {
+    const dict = this.store[dictName]
+    if (!dict || !(reading in dict)) return
+    delete dict[reading]
     this.saveFile(dictName)
   }
 

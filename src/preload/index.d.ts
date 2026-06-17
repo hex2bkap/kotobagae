@@ -28,6 +28,12 @@ interface AutosaveFileInfo {
   preview: string
 }
 
+interface DictEntryInfo {
+  word: string
+  memo: string
+  count: number
+}
+
 interface KotobagaeAPI {
   openFile: () => Promise<{ path: string; content: string; encoding: string } | null>
   openFilePath: (filePath: string) => Promise<{ path: string; content: string; encoding: string } | null>
@@ -62,6 +68,20 @@ interface KotobagaeAPI {
     getCandidates: (textBeforeCursor: string) => Promise<SearchResult | null>
     addEntry: (reading: string, candidates: string[]) => Promise<boolean>
     createDict: (name: string) => Promise<boolean>
+    openManager: () => Promise<void>
+    getDictData: (name: string) => Promise<Record<string, DictEntryInfo[]>>
+    updateEntry: (dictName: string, reading: string, index: number, patch: { word?: string; memo?: string; count?: number }) => Promise<boolean>
+    removeCandidate: (dictName: string, reading: string, index: number) => Promise<void>
+    addCandidate: (dictName: string, reading: string, word: string) => Promise<boolean>
+    renameReading: (dictName: string, oldReading: string, newReading: string) => Promise<boolean>
+    removeReading: (dictName: string, reading: string) => Promise<void>
+    renameDict: (oldName: string, newName: string) => Promise<boolean>
+    deleteDict: (name: string) => Promise<void>
+    copyDict: (src: string, dst: string) => Promise<boolean>
+    exportTsv: (dictName: string) => Promise<{ success: boolean; count: number }>
+    importTsv: (dictName: string) => Promise<{ success: boolean; count: number }>
+    notifyListUpdated: () => Promise<void>
+    onListUpdated: (cb: () => void) => () => void
   }
 }
 

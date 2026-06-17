@@ -104,10 +104,13 @@ function App(): JSX.Element {
     return () => clearInterval(timer)
   }, [settings?.autosave.enabled, settings?.autosave.intervalMinutes])
 
-  // ── 辞書一覧 ──────────────────────────────────────────────────────────
+  // ── 辞書一覧（初回＋管理ウィンドウからの更新通知で再取得）──────────────
 
   useEffect(() => {
     window.api.dict.listDicts().then(setDictList)
+    return window.api.dict.onListUpdated(() => {
+      window.api.dict.listDicts().then(setDictList)
+    })
   }, [])
 
   // ── モーダルヘルパー ──────────────────────────────────────────────────
@@ -424,6 +427,10 @@ function App(): JSX.Element {
   }, [])
 
   const handleDictChange = useCallback(async (name: string) => {
+    if (name === '__manage__') {
+      await window.api.dict.openManager()
+      return
+    }
     const activeId = activeTabIdRef.current
     const newName = name === '' ? null : name
     setTabs((prev) =>
@@ -745,6 +752,8 @@ function App(): JSX.Element {
           {dictList.map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
+          <option disabled>──────</option>
+          <option value="__manage__">辞書を管理…</option>
         </select>
         <span style={{ color: '#aaa', fontSize: '12px' }}>Ctrl+D: 選択テキストを辞書に登録</span>
         <div style={{ marginLeft: 'auto' }}>

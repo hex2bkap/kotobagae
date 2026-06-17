@@ -89,6 +89,110 @@ describe('mergeEntries', () => {
   })
 })
 
+// ── DictManager 管理操作テスト ───────────────────────────────
+
+describe('DictManager 管理操作', () => {
+  const tmpDir = join(process.cwd(), 'src/test/dict/__tmp_manage__')
+
+  beforeEach(() => {
+    mkdirSync(tmpDir, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('updateEntry: word を変更できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    const ok = manager.updateEntry('test', 'てすと', 0, { word: '試験' })
+    expect(ok).toBe(true)
+    expect(manager.getDict('test')['てすと'][0].word).toBe('試験')
+  })
+
+  it('updateEntry: memo を変更できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    manager.updateEntry('test', 'てすと', 0, { memo: 'キャラ設定' })
+    expect(manager.getDict('test')['てすと'][0].memo).toBe('キャラ設定')
+  })
+
+  it('updateEntry: 同じ word が既にあれば false を返す', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト', '試験'])
+    const ok = manager.updateEntry('test', 'てすと', 0, { word: '試験' })
+    expect(ok).toBe(false)
+  })
+
+  it('removeCandidate: 候補を1件削除できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト', '試験'])
+    manager.removeCandidate('test', 'てすと', 0)
+    const entries = manager.getDict('test')['てすと']
+    expect(entries).toHaveLength(1)
+    expect(entries[0].word).toBe('試験')
+  })
+
+  it('removeCandidate: 最後の候補を削除すると読みごと消える', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    manager.removeCandidate('test', 'てすと', 0)
+    expect(manager.getDict('test')['てすと']).toBeUndefined()
+  })
+
+  it('addCandidate: 新規候補を追加できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    const ok = manager.addCandidate('test', 'てすと', '試験')
+    expect(ok).toBe(true)
+    expect(manager.getDict('test')['てすと']).toHaveLength(2)
+  })
+
+  it('addCandidate: 重複は追加しない', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    const ok = manager.addCandidate('test', 'てすと', 'テスト')
+    expect(ok).toBe(false)
+    expect(manager.getDict('test')['てすと']).toHaveLength(1)
+  })
+
+  it('renameReading: 読みを変更できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    const ok = manager.renameReading('test', 'てすと', 'ためし')
+    expect(ok).toBe(true)
+    expect(manager.getDict('test')['ためし']).toBeDefined()
+    expect(manager.getDict('test')['てすと']).toBeUndefined()
+  })
+
+  it('renameReading: 新しい読みが既にあれば false を返す', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    manager.addEntry('test', 'ためし', ['試し'])
+    const ok = manager.renameReading('test', 'てすと', 'ためし')
+    expect(ok).toBe(false)
+  })
+
+  it('removeReading: 読みを削除できる', () => {
+    const manager = new DictManager(tmpDir)
+    manager.createDict('test')
+    manager.addEntry('test', 'てすと', ['テスト'])
+    manager.addEntry('test', 'あ', ['亜'])
+    manager.removeReading('test', 'てすと')
+    expect(manager.getDict('test')['てすと']).toBeUndefined()
+    expect(manager.getDict('test')['あ']).toBeDefined()
+  })
+})
+
 // ── 旧フラット形式 → v1.0 自動移行テスト ────────────────────
 
 describe('DictManager 旧形式の自動移行', () => {

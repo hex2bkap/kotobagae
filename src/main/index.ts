@@ -15,6 +15,7 @@ import { DEFAULT_SETTINGS } from '../shared/settings-types'
 // ── グローバル変数 ────────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null
+let dictWindow: BrowserWindow | null = null
 let dictManager: DictManager | null = null
 let activeDictName: string | null = null
 let dataDir = ''
@@ -56,6 +57,7 @@ function loadSettings(): AppSettings {
     // 未知キー無視・欠落キーはデフォルト補完
     return {
       windowBounds: p.windowBounds ?? DEFAULT_SETTINGS.windowBounds,
+      dictWindowBounds: p.dictWindowBounds ?? DEFAULT_SETTINGS.dictWindowBounds,
       autosave: {
         enabled: p.autosave?.enabled ?? DEFAULT_SETTINGS.autosave.enabled,
         intervalMinutes: p.autosave?.intervalMinutes ?? DEFAULT_SETTINGS.autosave.intervalMinutes,
@@ -121,6 +123,56 @@ function readFileWithEncoding(filePath: string): { content: string; encoding: st
   return { content: iconv.decode(buf, enc), encoding: enc }
 }
 
+// ── 辞書管理ウィンドウ ────────────────────────────────────────────────────────
+
+function createOrFocusDictWindow(): void {
+  if (dictWindow && !dictWindow.isDestroyed()) {
+    if (dictWindow.isMinimized()) dictWindow.restore()
+    dictWindow.focus()
+    return
+  }
+
+  const savedBounds = currentSettings.dictWindowBounds
+  const bounds = savedBounds ? clampBounds(savedBounds) : null
+
+  dictWindow = new BrowserWindow({
+    width: bounds?.width ?? 820,
+    height: bounds?.height ?? 580,
+    x: bounds?.x,
+    y: bounds?.y,
+    title: '辞書を管理 — コトバガエ',
+    show: false,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  dictWindow.on('ready-to-show', () => { dictWindow?.show() })
+
+  let dictBoundsTimer: NodeJS.Timeout | null = null
+  const scheduleDict = (): void => {
+    if (dictBoundsTimer) clearTimeout(dictBoundsTimer)
+    dictBoundsTimer = setTimeout(() => {
+      if (!dictWindow || dictWindow.isDestroyed()) return
+      currentSettings = { ...currentSettings, dictWindowBounds: dictWindow.getBounds() }
+      saveSettings(currentSettings)
+    }, 500)
+  }
+  dictWindow.on('move', scheduleDict)
+  dictWindow.on('resize', scheduleDict)
+
+  dictWindow.on('closed', () => { dictWindow = null })
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    dictWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/dict.html')
+  } else {
+    dictWindow.loadFile(join(__dirname, '../renderer/dict.html'))
+  }
+}
+
 // ── メニュー ──────────────────────────────────────────────────────────────────
 
 function buildMenu(): void {
@@ -148,6 +200,12 @@ function buildMenu(): void {
         { label: 'コピー', role: 'copy' },
         { label: '貼り付け', role: 'paste' },
         { label: 'すべて選択', role: 'selectAll' }
+      ]
+    },
+    {
+      label: '辞書',
+      submenu: [
+        { label: '辞書を管理…', click: () => createOrFocusDictWindow() }
       ]
     },
     {
@@ -372,6 +430,63 @@ ipcMain.handle('dict:addEntry', (_event, reading: string, candidates: string[]) 
   return true
 })
 ipcMain.handle('dict:createDict', (_event, name: string) => dictManager?.createDict(name) ?? false)
+
+// 辞書管理ウィンドウ操作
+ipcMain.handle('dict:openManager', () => createOrFocusDictWindow())
+ipcMain.handle('dict:getDictData', (_event, name: string) => dictManager?.getDictData(name) ?? {})
+ipcMain.handle('dict:updateEntry', (
+  _event, dictName: string, reading: string, index: number,
+  patch: { word?: string; memo?: string; count?: number }
+) => dictManager?.updateEntry(dictName, reading, index, patch) ?? false)
+ipcMain.handle('dict:removeCandidate', (
+  _event, dictName: string, reading: string, index: number
+) => { dictManager?.removeCandidate(dictName, reading, index) })
+ipcMain.handle('dict:addCandidate', (
+  _event, dictName: string, reading: string, word: string
+) => dictManager?.addCandidate(dictName, reading, word) ?? false)
+ipcMain.handle('dict:renameReading', (
+  _event, dictName: string, oldR: string, newR: string
+) => dictManager?.renameReading(dictName, oldR, newR) ?? false)
+ipcMain.handle('dict:removeReading', (
+  _event, dictName: string, reading: string
+) => { dictManager?.removeReading(dictName, reading) })
+ipcMain.handle('dict:renameDict', (
+  _event, oldName: string, newName: string
+) => dictManager?.renameDict(oldName, newName) ?? false)
+ipcMain.handle('dict:deleteDict', (
+  _event, name: string
+) => { dictManager?.deleteDict(name) })
+ipcMain.handle('dict:copyDict', (
+  _event, src: string, dst: string
+) => dictManager?.copyDict(src, dst) ?? false)
+ipcMain.handle('dict:exportTsv', async (event, dictName: string) => {
+  const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+  if (!win || !dictManager) return { success: false, count: 0 }
+  const result = await dialog.showSaveDialog(win, {
+    defaultPath: `${dictName}.tsv`,
+    filters: [{ name: 'TSVファイル', extensions: ['tsv', 'txt'] }]
+  })
+  if (result.canceled || !result.filePath) return { success: false, count: 0 }
+  const count = dictManager.exportTsv(result.filePath, dictName)
+  return { success: true, count }
+})
+ipcMain.handle('dict:importTsv', async (event, dictName: string) => {
+  const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+  if (!win || !dictManager) return { success: false, count: 0 }
+  const result = await dialog.showOpenDialog(win, {
+    filters: [{ name: 'TSVファイル', extensions: ['tsv', 'txt'] }],
+    properties: ['openFile']
+  })
+  if (result.canceled || result.filePaths.length === 0) return { success: false, count: 0 }
+  const count = dictManager.importTsv(result.filePaths[0], dictName)
+  // メインウィンドウの辞書リストを更新通知
+  mainWindow?.webContents.send('dict:listUpdated')
+  return { success: true, count }
+})
+// 辞書リスト変更をメインウィンドウへ通知するヘルパー（管理操作後に呼ぶ）
+ipcMain.handle('dict:notifyListUpdated', () => {
+  mainWindow?.webContents.send('dict:listUpdated')
+})
 
 // ── シングルインスタンス制御 ────────────────────────────────────────────────
 

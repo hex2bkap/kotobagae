@@ -120,7 +120,40 @@ const api = {
     addEntry: (reading: string, candidates: string[]) =>
       ipcRenderer.invoke('dict:addEntry', reading, candidates) as Promise<boolean>,
     createDict: (name: string) =>
-      ipcRenderer.invoke('dict:createDict', name) as Promise<boolean>
+      ipcRenderer.invoke('dict:createDict', name) as Promise<boolean>,
+    // 辞書管理ウィンドウ
+    openManager: () => ipcRenderer.invoke('dict:openManager') as Promise<void>,
+    getDictData: (name: string) =>
+      ipcRenderer.invoke('dict:getDictData', name) as Promise<
+        Record<string, Array<{ word: string; memo: string; count: number }>>
+      >,
+    updateEntry: (
+      dictName: string, reading: string, index: number,
+      patch: { word?: string; memo?: string; count?: number }
+    ) => ipcRenderer.invoke('dict:updateEntry', dictName, reading, index, patch) as Promise<boolean>,
+    removeCandidate: (dictName: string, reading: string, index: number) =>
+      ipcRenderer.invoke('dict:removeCandidate', dictName, reading, index) as Promise<void>,
+    addCandidate: (dictName: string, reading: string, word: string) =>
+      ipcRenderer.invoke('dict:addCandidate', dictName, reading, word) as Promise<boolean>,
+    renameReading: (dictName: string, oldReading: string, newReading: string) =>
+      ipcRenderer.invoke('dict:renameReading', dictName, oldReading, newReading) as Promise<boolean>,
+    removeReading: (dictName: string, reading: string) =>
+      ipcRenderer.invoke('dict:removeReading', dictName, reading) as Promise<void>,
+    renameDict: (oldName: string, newName: string) =>
+      ipcRenderer.invoke('dict:renameDict', oldName, newName) as Promise<boolean>,
+    deleteDict: (name: string) =>
+      ipcRenderer.invoke('dict:deleteDict', name) as Promise<void>,
+    copyDict: (src: string, dst: string) =>
+      ipcRenderer.invoke('dict:copyDict', src, dst) as Promise<boolean>,
+    exportTsv: (dictName: string) =>
+      ipcRenderer.invoke('dict:exportTsv', dictName) as Promise<{ success: boolean; count: number }>,
+    importTsv: (dictName: string) =>
+      ipcRenderer.invoke('dict:importTsv', dictName) as Promise<{ success: boolean; count: number }>,
+    notifyListUpdated: () => ipcRenderer.invoke('dict:notifyListUpdated') as Promise<void>,
+    onListUpdated: (cb: () => void) => {
+      ipcRenderer.on('dict:listUpdated', cb)
+      return () => ipcRenderer.removeListener('dict:listUpdated', cb)
+    }
   }
 }
 
