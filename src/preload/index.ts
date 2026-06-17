@@ -39,6 +39,22 @@ const api = {
   onMenuSaveAs: (cb: () => void) => {
     ipcRenderer.on('menu:saveAs', cb)
     return () => ipcRenderer.removeListener('menu:saveAs', cb)
+  },
+
+  // 辞書 API
+  dict: {
+    listDicts: () => ipcRenderer.invoke('dict:listDicts') as Promise<string[]>,
+    getActiveDict: () => ipcRenderer.invoke('dict:getActiveDict') as Promise<string | null>,
+    setActiveDict: (name: string | null) => ipcRenderer.invoke('dict:setActiveDict', name),
+    getCandidates: (textBeforeCursor: string) =>
+      ipcRenderer.invoke('dict:getCandidates', textBeforeCursor) as Promise<{
+        reading: string
+        candidates: string[]
+      } | null>,
+    addEntry: (reading: string, candidates: string[]) =>
+      ipcRenderer.invoke('dict:addEntry', reading, candidates) as Promise<boolean>,
+    createDict: (name: string) =>
+      ipcRenderer.invoke('dict:createDict', name) as Promise<boolean>
   }
 }
 

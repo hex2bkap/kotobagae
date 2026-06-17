@@ -4,8 +4,12 @@ import { readFileSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as chardet from 'chardet'
 import * as iconv from 'iconv-lite'
+import { DictManager } from '../shared/dict/DictManager'
+import { searchCandidates } from '../shared/dict/engine'
 
 let mainWindow: BrowserWindow | null = null
+let dictManager: DictManager | null = null
+let activeDictName: string | null = null
 
 function readFileWithEncoding(filePath: string): { content: string; encoding: string } {
   const buf = readFileSync(filePath)
@@ -137,12 +141,43 @@ ipcMain.on('window:setTitle', (_event, title: string) => {
   mainWindow?.setTitle(title)
 })
 
+// 辞書 IPC ハンドラー
+
+ipcMain.handle('dict:listDicts', () => {
+  return dictManager?.listDicts() ?? []
+})
+
+ipcMain.handle('dict:getActiveDict', () => activeDictName)
+
+ipcMain.handle('dict:setActiveDict', (_event, name: string | null) => {
+  activeDictName = name
+})
+
+ipcMain.handle('dict:getCandidates', (_event, textBeforeCursor: string) => {
+  if (!dictManager || !activeDictName) return null
+  const dict = dictManager.getDict(activeDictName)
+  return searchCandidates(textBeforeCursor, dict)
+})
+
+ipcMain.handle('dict:addEntry', (_event, reading: string, candidates: string[]) => {
+  if (!dictManager || !activeDictName) return false
+  dictManager.addEntry(activeDictName, reading, candidates)
+  return true
+})
+
+ipcMain.handle('dict:createDict', (_event, name: string) => {
+  return dictManager?.createDict(name) ?? false
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.hex2bkap.kotobagae')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  const dictsDir = join(app.getPath('userData'), 'dicts')
+  dictManager = new DictManager(dictsDir)
 
   buildMenu()
   createWindow()
