@@ -1,13 +1,71 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import * as chardet from 'chardet'
+import * as iconv from 'iconv-lite'
+
+let mainWindow: BrowserWindow | null = null
+
+function readFileWithEncoding(filePath: string): { content: string; encoding: string } {
+  const buf = readFileSync(filePath)
+  const detected = chardet.detect(buf)
+  const enc = detected && iconv.encodingExists(detected) ? detected : 'UTF-8'
+  const content = iconv.decode(buf, enc)
+  return { content, encoding: enc }
+}
+
+function buildMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'ファイル',
+      submenu: [
+        {
+          label: '新規',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => mainWindow?.webContents.send('menu:new')
+        },
+        {
+          label: '開く...',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => mainWindow?.webContents.send('menu:open')
+        },
+        {
+          label: '保存',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => mainWindow?.webContents.send('menu:save')
+        },
+        {
+          label: '別名で保存...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => mainWindow?.webContents.send('menu:saveAs')
+        },
+        { type: 'separator' },
+        { label: '終了', role: 'quit' }
+      ]
+    },
+    {
+      label: '編集',
+      submenu: [
+        { label: '元に戻す', role: 'undo' },
+        { label: 'やり直し', role: 'redo' },
+        { type: 'separator' },
+        { label: '切り取り', role: 'cut' },
+        { label: 'コピー', role: 'copy' },
+        { label: '貼り付け', role: 'paste' },
+        { label: 'すべて選択', role: 'selectAll' }
+      ]
+    }
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -17,7 +75,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow!.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -32,6 +90,53 @@ function createWindow(): void {
   }
 }
 
+// IPC ハンドラー
+
+ipcMain.handle('file:open', async () => {
+  if (!mainWindow) return null
+  const result = await dialog.showOpenDialog(mainWindow, {
+    filters: [
+      { name: 'テキストファイル', extensions: ['txt', 'md'] },
+      { name: 'すべてのファイル', extensions: ['*'] }
+    ],
+    properties: ['openFile']
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  const filePath = result.filePaths[0]
+  const { content, encoding } = readFileWithEncoding(filePath)
+  return { path: filePath, content, encoding }
+})
+
+ipcMain.handle('file:save', async (_event, filePath: string, content: string) => {
+  try {
+    writeFileSync(filePath, content, 'utf-8')
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+})
+
+ipcMain.handle('file:saveAs', async (_event, content: string) => {
+  if (!mainWindow) return null
+  const result = await dialog.showSaveDialog(mainWindow, {
+    filters: [
+      { name: 'テキストファイル', extensions: ['txt'] },
+      { name: 'すべてのファイル', extensions: ['*'] }
+    ]
+  })
+  if (result.canceled || !result.filePath) return null
+  try {
+    writeFileSync(result.filePath, content, 'utf-8')
+    return { path: result.filePath, success: true }
+  } catch (e) {
+    return { path: result.filePath, success: false, error: String(e) }
+  }
+})
+
+ipcMain.on('window:setTitle', (_event, title: string) => {
+  mainWindow?.setTitle(title)
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.hex2bkap.kotobagae')
 
@@ -39,6 +144,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  buildMenu()
   createWindow()
 
   app.on('activate', function () {
