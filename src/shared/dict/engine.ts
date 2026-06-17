@@ -28,6 +28,18 @@ export function searchCandidates(
 }
 
 /**
+ * エントリを count 降順（同数は登録順）でソートして word[] を返す。
+ * byFrequency=false のときは登録順のまま返す。
+ */
+export function sortCandidates(entries: DictEntry[], byFrequency: boolean): string[] {
+  if (!byFrequency) return entries.map((e) => e.word)
+  return entries
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => b.e.count - a.e.count || a.i - b.i)
+    .map(({ e }) => e.word)
+}
+
+/**
  * エントリリストに word をキーとして重複なくマージする（イミュータブル）。
  * 既存エントリの memo/count は保持し、新規 word のみ { word, memo:'', count:0 } で追加する。
  */

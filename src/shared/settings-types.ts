@@ -6,12 +6,17 @@ export interface AppSettings {
     intervalMinutes: number
     maxAgeDays: number
   }
+  dictSort: {
+    byFrequency: boolean
+    showCount: boolean
+  }
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   windowBounds: null,
   dictWindowBounds: null,
-  autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 }
+  autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 },
+  dictSort: { byFrequency: true, showCount: false }
 }
 
 export interface AutosaveFileInfo {

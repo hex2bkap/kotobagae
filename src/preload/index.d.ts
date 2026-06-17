@@ -19,6 +19,7 @@ interface SessionData {
 interface SettingsData {
   windowBounds: { x: number; y: number; width: number; height: number } | null
   autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
+  dictSort: { byFrequency: boolean; showCount: boolean }
 }
 
 interface AutosaveFileInfo {
@@ -80,6 +81,7 @@ interface KotobagaeAPI {
     copyDict: (src: string, dst: string) => Promise<boolean>
     exportTsv: (dictName: string) => Promise<{ success: boolean; count: number }>
     importTsv: (dictName: string) => Promise<{ success: boolean; count: number }>
+    recordUsage: (dictName: string, reading: string, word: string) => Promise<void>
     notifyListUpdated: () => Promise<void>
     onListUpdated: (cb: () => void) => () => void
   }

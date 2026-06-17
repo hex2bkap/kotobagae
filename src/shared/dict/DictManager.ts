@@ -6,6 +6,7 @@ import { mergeEntries } from './engine'
 export class DictManager {
   private readonly dir: string
   private store: DictStore = {}
+  private dirty: Set<string> = new Set()
 
   constructor(dictsDir: string) {
     this.dir = dictsDir
@@ -98,6 +99,24 @@ export class DictManager {
     )
     this.saveFile(dstName)
     return true
+  }
+
+  // ── 使用頻度記録（バッチ保存） ────────────────────────────────
+
+  recordUsage(dictName: string, reading: string, word: string): void {
+    const entries = this.store[dictName]?.[reading]
+    if (!entries) return
+    const entry = entries.find((e) => e.word === word)
+    if (!entry) return
+    entry.count++
+    this.dirty.add(dictName)
+  }
+
+  flushDirty(): void {
+    for (const name of this.dirty) {
+      if (name in this.store) this.saveFile(name)
+    }
+    this.dirty.clear()
   }
 
   // ── 辞書データ取得 ─────────────────────────────────────────

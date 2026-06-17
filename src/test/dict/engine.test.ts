@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs'
 import { join } from 'path'
-import { searchCandidates, mergeEntries } from '../../shared/dict/engine'
+import { searchCandidates, mergeEntries, sortCandidates } from '../../shared/dict/engine'
 import { DictManager } from '../../shared/dict/DictManager'
 import type { Dict } from '../../shared/dict/types'
 
@@ -227,5 +227,38 @@ describe('DictManager 旧形式の自動移行', () => {
     const saved = JSON.parse(readFileSync(join(tmpDir, '旧辞書.json'), 'utf-8'))
     expect(saved.schema_version).toBe(1)
     expect(saved.entries['てすと'][0].word).toBe('テスト')
+  })
+})
+
+// ── sortCandidates テスト ──────────────────────────────────────────
+
+describe('sortCandidates', () => {
+  const entries = [
+    { word: 'テスト', memo: '', count: 3 },
+    { word: '試験', memo: '', count: 5 },
+    { word: '検定', memo: '', count: 3 },
+    { word: '試み', memo: '', count: 0 },
+  ]
+
+  it('byFrequency=true: count 降順で返る', () => {
+    const result = sortCandidates(entries, true)
+    expect(result[0]).toBe('試験')
+  })
+
+  it('byFrequency=true: 同数は登録順でタイブレーク', () => {
+    const result = sortCandidates(entries, true)
+    // テスト(3)・検定(3) は登録順でテストが先
+    expect(result[1]).toBe('テスト')
+    expect(result[2]).toBe('検定')
+  })
+
+  it('byFrequency=false: 登録順のまま返る', () => {
+    const result = sortCandidates(entries, false)
+    expect(result).toEqual(['テスト', '試験', '検定', '試み'])
+  })
+
+  it('元の配列を変更しない（イミュータブル）', () => {
+    sortCandidates(entries, true)
+    expect(entries[0].word).toBe('テスト')
   })
 })

@@ -190,6 +190,7 @@ export function DictManagerApp(): JSX.Element {
 
   // 共通
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [showCount, setShowCount] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
   const [confirmState, setConfirmState] = useState<{
     message: string
@@ -238,16 +239,19 @@ export function DictManagerApp(): JSX.Element {
   // ── 初期ロード ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    Promise.all([window.api.dict.listDicts(), window.api.dict.getActiveDict()]).then(
-      async ([list, active]) => {
-        setDicts(list)
-        const initial = active && list.includes(active) ? active : list[0] ?? null
-        if (initial) {
-          setSelectedDict(initial)
-          await reloadDictData(initial)
-        }
+    Promise.all([
+      window.api.dict.listDicts(),
+      window.api.dict.getActiveDict(),
+      window.api.settings.load()
+    ]).then(async ([list, active, s]) => {
+      setShowCount(s.dictSort?.showCount ?? false)
+      setDicts(list)
+      const initial = active && list.includes(active) ? active : list[0] ?? null
+      if (initial) {
+        setSelectedDict(initial)
+        await reloadDictData(initial)
       }
-    )
+    })
   }, [reloadDictData])
 
   // コンテキストメニューを外クリックで閉じる
@@ -717,15 +721,17 @@ export function DictManagerApp(): JSX.Element {
                       {entry.word}
                     </span>
                   )}
-                  {/* 頻度バッジ（表示のみ・M5b で加算） */}
-                  <span style={{
-                    fontSize: 11, padding: '1px 6px',
-                    background: entry.count > 0 ? '#e8f0fe' : '#f0f0f0',
-                    color: entry.count > 0 ? '#1a56c4' : '#aaa',
-                    borderRadius: 10, flexShrink: 0
-                  }}>
-                    {entry.count}回
-                  </span>
+                  {/* 頻度バッジ（B=オンのときのみ表示） */}
+                  {showCount && (
+                    <span style={{
+                      fontSize: 11, padding: '1px 6px',
+                      background: entry.count > 0 ? '#e8f0fe' : '#f0f0f0',
+                      color: entry.count > 0 ? '#1a56c4' : '#aaa',
+                      borderRadius: 10, flexShrink: 0
+                    }}>
+                      使用 {entry.count}回
+                    </span>
+                  )}
                   <button
                     onClick={() => handleDeleteCandidate(idx)}
                     title="削除"

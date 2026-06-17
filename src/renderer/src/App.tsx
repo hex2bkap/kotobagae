@@ -66,6 +66,11 @@ function App(): JSX.Element {
   activeTabIdRef.current = activeTabId
   popupRef.current = popup
 
+  const activeTab = tabs.find((t) => t.id === activeTabId)
+  const activeDictName = activeTab?.dictName ?? null
+  const activeDictNameRef = useRef<string | null>(activeDictName)
+  activeDictNameRef.current = activeDictName
+
   // ── タイトル（tabs / activeTabId の変化に追従）────────────────────────
 
   useEffect(() => {
@@ -79,7 +84,7 @@ function App(): JSX.Element {
 
   useEffect(() => {
     window.api.settings.load().then((s) =>
-      setSettings({ windowBounds: s.windowBounds, autosave: { ...s.autosave } })
+      setSettings({ windowBounds: s.windowBounds, autosave: { ...s.autosave }, dictSort: { ...s.dictSort } })
     )
   }, [])
 
@@ -174,12 +179,15 @@ function App(): JSX.Element {
     const view = viewRef.current
     const p = popupRef.current
     if (!view || !p) return
+    const word = p.candidates[index]
     const pos = view.state.selection.main.head
     const from = pos - p.reading.length
     view.dispatch({
-      changes: { from, to: pos, insert: p.candidates[index] },
-      selection: { anchor: from + p.candidates[index].length }
+      changes: { from, to: pos, insert: word },
+      selection: { anchor: from + word.length }
     })
+    const dictName = activeDictNameRef.current
+    if (dictName) window.api.dict.recordUsage(dictName, p.reading, word)
     closePopup()
     view.focus()
   }, [closePopup])
@@ -680,9 +688,6 @@ function App(): JSX.Element {
   }, [])
 
   // ── 描画 ──────────────────────────────────────────────────────────────
-
-  const activeTab = tabs.find((t) => t.id === activeTabId)
-  const activeDictName = activeTab?.dictName ?? null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0 }}>

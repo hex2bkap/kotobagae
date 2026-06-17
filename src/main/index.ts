@@ -8,7 +8,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as chardet from 'chardet'
 import * as iconv from 'iconv-lite'
 import { DictManager } from '../shared/dict/DictManager'
-import { searchCandidates } from '../shared/dict/engine'
+import { searchCandidates, sortCandidates } from '../shared/dict/engine'
 import type { AppSettings, AutosaveFileInfo } from '../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../shared/settings-types'
 
@@ -62,6 +62,10 @@ function loadSettings(): AppSettings {
         enabled: p.autosave?.enabled ?? DEFAULT_SETTINGS.autosave.enabled,
         intervalMinutes: p.autosave?.intervalMinutes ?? DEFAULT_SETTINGS.autosave.intervalMinutes,
         maxAgeDays: p.autosave?.maxAgeDays ?? DEFAULT_SETTINGS.autosave.maxAgeDays
+      },
+      dictSort: {
+        byFrequency: p.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
+        showCount: p.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount
       }
     }
   } catch {
@@ -264,6 +268,7 @@ function createWindow(): void {
 
   mainWindow.on('close', (e) => {
     e.preventDefault()
+    dictManager?.flushDirty()
     mainWindow?.webContents.send('app:beforeClose')
   })
 
@@ -422,7 +427,12 @@ ipcMain.handle('dict:getActiveDict', () => activeDictName)
 ipcMain.handle('dict:setActiveDict', (_event, name: string | null) => { activeDictName = name })
 ipcMain.handle('dict:getCandidates', (_event, textBeforeCursor: string) => {
   if (!dictManager || !activeDictName) return null
-  return searchCandidates(textBeforeCursor, dictManager.getDict(activeDictName))
+  const dict = dictManager.getDict(activeDictName)
+  const result = searchCandidates(textBeforeCursor, dict)
+  if (!result) return null
+  const entries = dict[result.reading] ?? []
+  const byFrequency = currentSettings.dictSort?.byFrequency ?? true
+  return { reading: result.reading, candidates: sortCandidates(entries, byFrequency) }
 })
 ipcMain.handle('dict:addEntry', (_event, reading: string, candidates: string[]) => {
   if (!dictManager || !activeDictName) return false
@@ -430,6 +440,9 @@ ipcMain.handle('dict:addEntry', (_event, reading: string, candidates: string[]) 
   return true
 })
 ipcMain.handle('dict:createDict', (_event, name: string) => dictManager?.createDict(name) ?? false)
+ipcMain.handle('dict:recordUsage', (_event, dictName: string, reading: string, word: string) => {
+  dictManager?.recordUsage(dictName, reading, word)
+})
 
 // 辞書管理ウィンドウ操作
 ipcMain.handle('dict:openManager', () => createOrFocusDictWindow())
@@ -516,6 +529,9 @@ if (!gotLock) {
 
     // ③ DictManager 初期化（dataDir 経由）
     dictManager = new DictManager(join(dataDir, 'dicts'))
+
+    // ④ 使用頻度カウントの定期バッチ保存（5分ごと）
+    setInterval(() => { dictManager?.flushDirty() }, 5 * 60 * 1000)
 
     buildMenu()
     createWindow()

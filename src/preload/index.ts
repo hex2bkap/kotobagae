@@ -149,6 +149,8 @@ const api = {
       ipcRenderer.invoke('dict:exportTsv', dictName) as Promise<{ success: boolean; count: number }>,
     importTsv: (dictName: string) =>
       ipcRenderer.invoke('dict:importTsv', dictName) as Promise<{ success: boolean; count: number }>,
+    recordUsage: (dictName: string, reading: string, word: string) =>
+      ipcRenderer.invoke('dict:recordUsage', dictName, reading, word) as Promise<void>,
     notifyListUpdated: () => ipcRenderer.invoke('dict:notifyListUpdated') as Promise<void>,
     onListUpdated: (cb: () => void) => {
       ipcRenderer.on('dict:listUpdated', cb)

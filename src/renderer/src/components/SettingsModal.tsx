@@ -16,7 +16,8 @@ export function SettingsModal({ onClose, onSave }: Props): JSX.Element {
     window.api.settings.load().then((s) =>
       setSettings({
         windowBounds: s.windowBounds,
-        autosave: { ...s.autosave }
+        autosave: { ...s.autosave },
+        dictSort: { ...s.dictSort }
       })
     )
   }, [])
@@ -94,6 +95,33 @@ export function SettingsModal({ onClose, onSave }: Props): JSX.Element {
               ))}
             </select>
           </div>
+        </section>
+
+        {/* 辞書・変換候補 */}
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>辞書・変換候補</h3>
+
+          <label style={rowStyle}>
+            <input
+              type="checkbox"
+              checked={settings.dictSort.byFrequency}
+              onChange={(e) =>
+                setSettings({ ...settings, dictSort: { ...settings.dictSort, byFrequency: e.target.checked } })
+              }
+            />
+            <span style={{ marginLeft: 6 }}>候補を頻度でおすすめ順にする</span>
+          </label>
+
+          <label style={rowStyle}>
+            <input
+              type="checkbox"
+              checked={settings.dictSort.showCount}
+              onChange={(e) =>
+                setSettings({ ...settings, dictSort: { ...settings.dictSort, showCount: e.target.checked } })
+              }
+            />
+            <span style={{ marginLeft: 6 }}>使用回数を辞書管理ウィンドウに表示する</span>
+          </label>
         </section>
 
         {/* データフォルダ */}
