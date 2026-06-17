@@ -9,6 +9,13 @@ const api = {
       encoding: string
     } | null>,
 
+  openFilePath: (filePath: string) =>
+    ipcRenderer.invoke('file:openPath', filePath) as Promise<{
+      path: string
+      content: string
+      encoding: string
+    } | null>,
+
   saveFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('file:save', filePath, content) as Promise<{
       success: boolean
@@ -23,6 +30,8 @@ const api = {
     } | null>,
 
   setTitle: (title: string) => ipcRenderer.send('window:setTitle', title),
+
+  confirmClose: () => ipcRenderer.send('window:confirmClose'),
 
   onMenuNew: (cb: () => void) => {
     ipcRenderer.on('menu:new', cb)
@@ -40,6 +49,28 @@ const api = {
     ipcRenderer.on('menu:saveAs', cb)
     return () => ipcRenderer.removeListener('menu:saveAs', cb)
   },
+
+  onBeforeClose: (cb: () => void) => {
+    ipcRenderer.on('app:beforeClose', cb)
+    return () => ipcRenderer.removeListener('app:beforeClose', cb)
+  },
+
+  onAppOpenFile: (cb: (filePath: string) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, path: string) => cb(path)
+    ipcRenderer.on('app:openFile', handler)
+    return () => ipcRenderer.removeListener('app:openFile', handler)
+  },
+
+  loadSession: () =>
+    ipcRenderer.invoke('session:load') as Promise<{
+      tabs: Array<{ filePath: string | null; cursorPos: number; dictName: string | null }>
+      activeTabIndex: number
+    } | null>,
+
+  saveSession: (data: {
+    tabs: Array<{ filePath: string | null; cursorPos: number; dictName: string | null }>
+    activeTabIndex: number
+  }) => ipcRenderer.invoke('session:save', data) as Promise<void>,
 
   // 辞書 API
   dict: {

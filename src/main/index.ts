@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, renameSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as chardet from 'chardet'
 import * as iconv from 'iconv-lite'
@@ -10,6 +10,20 @@ import { searchCandidates } from '../shared/dict/engine'
 let mainWindow: BrowserWindow | null = null
 let dictManager: DictManager | null = null
 let activeDictName: string | null = null
+
+interface SessionTab {
+  filePath: string | null
+  cursorPos: number
+  dictName: string | null
+}
+interface SessionData {
+  tabs: SessionTab[]
+  activeTabIndex: number
+}
+
+function getSessionPath(): string {
+  return join(app.getPath('userData'), 'session.json')
+}
 
 function readFileWithEncoding(filePath: string): { content: string; encoding: string } {
   const buf = readFileSync(filePath)
@@ -82,6 +96,12 @@ function createWindow(): void {
     mainWindow!.show()
   })
 
+  // セッション保存を renderer に委譲してから実際に閉じる
+  mainWindow.on('close', (e) => {
+    e.preventDefault()
+    mainWindow?.webContents.send('app:beforeClose')
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -94,7 +114,7 @@ function createWindow(): void {
   }
 }
 
-// IPC ハンドラー
+// ── IPC ハンドラー ─────────────────────────────────────────────────────────
 
 ipcMain.handle('file:open', async () => {
   if (!mainWindow) return null
@@ -109,6 +129,15 @@ ipcMain.handle('file:open', async () => {
   const filePath = result.filePaths[0]
   const { content, encoding } = readFileWithEncoding(filePath)
   return { path: filePath, content, encoding }
+})
+
+ipcMain.handle('file:openPath', (_event, filePath: string) => {
+  try {
+    const { content, encoding } = readFileWithEncoding(filePath)
+    return { path: filePath, content, encoding }
+  } catch {
+    return null
+  }
 })
 
 ipcMain.handle('file:save', async (_event, filePath: string, content: string) => {
@@ -141,11 +170,35 @@ ipcMain.on('window:setTitle', (_event, title: string) => {
   mainWindow?.setTitle(title)
 })
 
-// 辞書 IPC ハンドラー
-
-ipcMain.handle('dict:listDicts', () => {
-  return dictManager?.listDicts() ?? []
+ipcMain.on('window:confirmClose', () => {
+  mainWindow?.destroy()
 })
+
+// セッション
+
+ipcMain.handle('session:load', () => {
+  try {
+    const raw = readFileSync(getSessionPath(), 'utf-8')
+    return JSON.parse(raw) as SessionData
+  } catch {
+    return null
+  }
+})
+
+ipcMain.handle('session:save', (_event, data: SessionData) => {
+  try {
+    const path = getSessionPath()
+    const tmp = path + '.tmp'
+    writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8')
+    renameSync(tmp, path)
+  } catch (e) {
+    console.error('session:save failed', e)
+  }
+})
+
+// 辞書
+
+ipcMain.handle('dict:listDicts', () => dictManager?.listDicts() ?? [])
 
 ipcMain.handle('dict:getActiveDict', () => activeDictName)
 
@@ -169,23 +222,40 @@ ipcMain.handle('dict:createDict', (_event, name: string) => {
   return dictManager?.createDict(name) ?? false
 })
 
-app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.hex2bkap.kotobagae')
+// ── シングルインスタンス制御 ────────────────────────────────────────────────
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+const gotLock = app.requestSingleInstanceLock()
+
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const filePath = argv.slice(2).find((arg) => !arg.startsWith('-'))
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+      if (filePath) mainWindow.webContents.send('app:openFile', filePath)
+    }
   })
 
-  const dictsDir = join(app.getPath('userData'), 'dicts')
-  dictManager = new DictManager(dictsDir)
+  app.whenReady().then(() => {
+    electronApp.setAppUserModelId('com.hex2bkap.kotobagae')
 
-  buildMenu()
-  createWindow()
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    const dictsDir = join(app.getPath('userData'), 'dicts')
+    dictManager = new DictManager(dictsDir)
+
+    buildMenu()
+    createWindow()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
   })
-})
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
