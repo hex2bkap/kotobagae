@@ -17,7 +17,8 @@ export function SettingsModal({ onClose, onSave }: Props): JSX.Element {
       setSettings({
         windowBounds: s.windowBounds,
         autosave: { ...s.autosave },
-        dictSort: { ...s.dictSort }
+        dictSort: { ...s.dictSort },
+        display: { ...(s.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }) }
       })
     )
   }, [])
@@ -122,6 +123,51 @@ export function SettingsModal({ onClose, onSave }: Props): JSX.Element {
             />
             <span style={{ marginLeft: 6 }}>使用回数を辞書管理ウィンドウに表示する</span>
           </label>
+        </section>
+
+        {/* 表示 */}
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>表示</h3>
+
+          <div style={rowStyle}>
+            <label>テーマ</label>
+            <select
+              value={settings.display?.theme ?? 'light'}
+              onChange={(e) =>
+                setSettings({ ...settings, display: { ...(settings.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }), theme: e.target.value as 'light' | 'dark' } })
+              }
+              style={selectStyle}
+            >
+              <option value="light">ライト</option>
+              <option value="dark">ダーク</option>
+            </select>
+          </div>
+
+          <label style={rowStyle}>
+            <input
+              type="checkbox"
+              checked={settings.display?.showWritingStats ?? false}
+              onChange={(e) =>
+                setSettings({ ...settings, display: { ...(settings.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }), showWritingStats: e.target.checked } })
+              }
+            />
+            <span style={{ marginLeft: 6 }}>ステータスバーに執筆統計を表示する</span>
+          </label>
+
+          <div style={{ ...rowStyle, opacity: settings.display?.showWritingStats ? 1 : 0.4 }}>
+            <label>文字数目標</label>
+            <input
+              type="number"
+              min={0}
+              value={settings.display?.wordGoal ?? 0}
+              disabled={!settings.display?.showWritingStats}
+              onChange={(e) =>
+                setSettings({ ...settings, display: { ...(settings.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }), wordGoal: Math.max(0, Number(e.target.value)) } })
+              }
+              style={{ ...selectStyle, width: 90 }}
+            />
+            <span style={{ fontSize: 12, color: '#888' }}>字（0 = 無効）</span>
+          </div>
         </section>
 
         {/* データフォルダ */}

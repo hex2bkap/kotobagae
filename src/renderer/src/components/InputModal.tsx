@@ -21,6 +21,8 @@ export function InputModal({ message, defaultValue = '', onOk, onCancel }: Props
   }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
+    // Enter/Escape をエディタに漏らさない
+    if (e.key === 'Enter' || e.key === 'Escape') e.stopPropagation()
     if (e.key === 'Enter') handleOk()
     if (e.key === 'Escape') onCancel()
   }

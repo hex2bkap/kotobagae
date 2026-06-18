@@ -10,13 +10,19 @@ export interface AppSettings {
     byFrequency: boolean
     showCount: boolean
   }
+  display: {
+    theme: 'light' | 'dark'
+    showWritingStats: boolean
+    wordGoal: number  // 0 = 無効
+  }
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   windowBounds: null,
   dictWindowBounds: null,
   autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 },
-  dictSort: { byFrequency: true, showCount: false }
+  dictSort: { byFrequency: true, showCount: false },
+  display: { theme: 'light', showWritingStats: false, wordGoal: 0 }
 }
 
 export interface AutosaveFileInfo {

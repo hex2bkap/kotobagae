@@ -1,0 +1,61 @@
+/* ── テーマカラー（CSS変数） ─────────────────────────────────────────────── */
+:root {
+  --kg-bg-primary:    #ffffff;
+  --kg-bg-secondary:  #f5f5f5;
+  --kg-bg-tertiary:   #e0e0e0;
+  --kg-text-primary:  #222222;
+  --kg-text-secondary:#555555;
+  --kg-text-muted:    #aaaaaa;
+  --kg-border:        #dddddd;
+  --kg-border-strong: #bbbbbb;
+  --kg-gutter-bg:     #f8f8f8;
+  --kg-active-line:   #f0f4ff;
+  --kg-active-gutter: #eeeeff;
+  --kg-tab-active:    #ffffff;
+  --kg-missing-text:  #b71c1c;
+  --kg-caret:         #333333;
+  --kg-accent:        #1976d2;
+}
+
+[data-theme="dark"] {
+  --kg-bg-primary:    #1e1e1e;
+  --kg-bg-secondary:  #252526;
+  --kg-bg-tertiary:   #2d2d2d;
+  --kg-text-primary:  #d4d4d4;
+  --kg-text-secondary:#9d9d9d;
+  --kg-text-muted:    #666666;
+  --kg-border:        #3c3c3c;
+  --kg-border-strong: #555555;
+  --kg-gutter-bg:     #252526;
+  --kg-active-line:   #2a2d2e;
+  --kg-active-gutter: #2a2d2e;
+  --kg-tab-active:    #1e1e1e;
+  --kg-missing-text:  #ef9a9a;
+  --kg-caret:         #aeafad;
+  --kg-accent:        #4a9eff;
+}
+
+/* ── ベースリセット ─────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  overflow: hidden;
+  background: var(--kg-bg-primary);
+  color: var(--kg-text-primary);
+  font-family: "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
+}
+
+/* ── 検索ハイライト ─────────────────────────────────────────────────────── */
+.cm-searchMatch {
+  background: rgba(255, 200, 0, 0.35);
+  border-radius: 2px;
+}
+.cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(240, 130, 0, 0.6);
+}
+
+[data-theme="dark"] .cm-searchMatch {
+  background: rgba(100, 80, 0, 0.6);
+}
+[data-theme="dark"] .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(200, 120, 0, 0.6);
+}

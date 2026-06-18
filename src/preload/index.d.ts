@@ -20,6 +20,7 @@ interface SettingsData {
   windowBounds: { x: number; y: number; width: number; height: number } | null
   autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
   dictSort: { byFrequency: boolean; showCount: boolean }
+  display: { theme: 'light' | 'dark'; showWritingStats: boolean; wordGoal: number }
 }
 
 interface AutosaveFileInfo {

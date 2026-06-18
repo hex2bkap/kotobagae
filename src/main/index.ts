@@ -66,10 +66,15 @@ function loadSettings(): AppSettings {
       dictSort: {
         byFrequency: p.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
         showCount: p.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount
+      },
+      display: {
+        theme: p.display?.theme ?? DEFAULT_SETTINGS.display.theme,
+        showWritingStats: p.display?.showWritingStats ?? DEFAULT_SETTINGS.display.showWritingStats,
+        wordGoal: p.display?.wordGoal ?? DEFAULT_SETTINGS.display.wordGoal
       }
     }
   } catch {
-    return { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave } }
+    return { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave }, display: { ...DEFAULT_SETTINGS.display } }
   }
 }
 

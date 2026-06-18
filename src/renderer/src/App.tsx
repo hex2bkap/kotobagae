@@ -1,12 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Extension } from '@codemirror/state'
+import { EditorState, Extension, Prec } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
+import { search } from '@codemirror/search'
 import { CandidatePopup } from './components/CandidatePopup'
 import { InputModal } from './components/InputModal'
 import { ConfirmModal } from './components/ConfirmModal'
 import { SettingsModal } from './components/SettingsModal'
 import { AutosaveRestoreModal } from './components/AutosaveRestoreModal'
+import { SearchPanel } from './components/SearchPanel'
+import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
 
@@ -58,6 +61,19 @@ function App(): JSX.Element {
   const [showSettings, setShowSettings] = useState(false)
   const [showAutosaveRestore, setShowAutosaveRestore] = useState(false)
 
+  // 検索パネル
+  const [showSearch, setShowSearch] = useState(false)
+  const [showReplace, setShowReplace] = useState(false)
+
+  // 集中モード（F11）
+  const [focusMode, setFocusMode] = useState(false)
+
+  // ステータスバー
+  const [statusInfo, setStatusInfo] = useState<StatusInfo>({
+    line: 1, col: 1, charCount: 0, selText: null, sessionDelta: 0
+  })
+  const sessionStartCharsRef = useRef<number | null>(null)
+
   // callbacks / state への参照を extensions や非同期コールバックから安全に使うための ref 群
   const tabsRef = useRef<Tab[]>(tabs)
   const activeTabIdRef = useRef<string | null>(activeTabId)
@@ -70,6 +86,13 @@ function App(): JSX.Element {
   const activeDictName = activeTab?.dictName ?? null
   const activeDictNameRef = useRef<string | null>(activeDictName)
   activeDictNameRef.current = activeDictName
+
+  // ── テーマ適用 ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!settings) return
+    document.documentElement.dataset.theme = settings.display?.theme ?? 'light'
+  }, [settings])
 
   // ── タイトル（tabs / activeTabId の変化に追従）────────────────────────
 
@@ -84,7 +107,12 @@ function App(): JSX.Element {
 
   useEffect(() => {
     window.api.settings.load().then((s) =>
-      setSettings({ windowBounds: s.windowBounds, autosave: { ...s.autosave }, dictSort: { ...s.dictSort } })
+      setSettings({
+        windowBounds: s.windowBounds,
+        autosave: { ...s.autosave },
+        dictSort: { ...s.dictSort },
+        display: { ...(s.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }) }
+      })
     )
   }, [])
 
@@ -118,6 +146,26 @@ function App(): JSX.Element {
     })
   }, [])
 
+  // ── F11 集中モード ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === 'F11') {
+        e.preventDefault()
+        setFocusMode((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  // 集中モード解除時にエディタへフォーカスを戻す
+  useEffect(() => {
+    if (!focusMode) {
+      setTimeout(() => viewRef.current?.focus(), 0)
+    }
+  }, [focusMode])
+
   // ── モーダルヘルパー ──────────────────────────────────────────────────
 
   const closePopup = useCallback(() => setPopup(null), [])
@@ -145,6 +193,32 @@ function App(): JSX.Element {
       }),
     []
   )
+
+  // ── 行番号ジャンプ ──────────────────────────────────────────────────────
+
+  const handleLineJump = useCallback(async () => {
+    const view = viewRef.current
+    if (!view) return
+    const input = await showInput('ジャンプ先の行番号を入力してください:')
+    // Enter keydown がエディタに漏れないよう、次イベントループでフォーカス＋移動する
+    setTimeout(() => {
+      if (input) {
+        const lineNum = parseInt(input, 10)
+        if (!isNaN(lineNum)) {
+          const doc = view.state.doc
+          const clamped = Math.max(1, Math.min(lineNum, doc.lines))
+          view.dispatch({
+            selection: { anchor: doc.line(clamped).from },
+            scrollIntoView: true
+          })
+        }
+      }
+      view.focus()
+    }, 0)
+  }, [showInput])
+
+  const handleLineJumpRef = useRef(handleLineJump)
+  handleLineJumpRef.current = handleLineJump
 
   // ── 変換候補ポップアップ ──────────────────────────────────────────────
 
@@ -197,9 +271,15 @@ function App(): JSX.Element {
   const confirmCandidateRef = useRef(confirmCandidate)
   const closePopupRef = useRef(closePopup)
   const handleQuickRegisterRef = useRef<() => void>(() => {})
+  const openSearchRef = useRef<(withReplace: boolean) => void>(() => {})
   triggerSearchRef.current = triggerSearch
   confirmCandidateRef.current = confirmCandidate
   closePopupRef.current = closePopup
+
+  openSearchRef.current = (withReplace: boolean) => {
+    setShowSearch(true)
+    setShowReplace(withReplace)
+  }
 
   // ── 簡易登録 ─────────────────────────────────────────────────────────
 
@@ -265,7 +345,6 @@ function App(): JSX.Element {
     const currentId = activeTabIdRef.current
     if (!view || newId === currentId) return
 
-    // 現在タブの最新状態を保存してからビューを切り替える
     const currentState = view.state
     if (currentId) {
       setTabs((prev) =>
@@ -517,6 +596,7 @@ function App(): JSX.Element {
     if (!editorRef.current) return
 
     const onUpdate = EditorView.updateListener.of((update) => {
+      // dirty フラグ
       if (update.docChanged) {
         const activeId = activeTabIdRef.current
         const activeTab = tabsRef.current.find((t) => t.id === activeId)
@@ -525,6 +605,29 @@ function App(): JSX.Element {
             prev.map((t) => (t.id === activeId ? { ...t, dirty: true } : t))
           )
         }
+      }
+
+      // ステータスバー更新
+      if (update.docChanged || update.selectionSet) {
+        const state = update.state
+        const pos = state.selection.main.head
+        const line = state.doc.lineAt(pos)
+        const { from, to } = state.selection.main
+        const selText = from !== to ? state.doc.sliceString(from, to) : null
+
+        // 文字数（空白・改行除く）
+        const text = state.doc.toString()
+        const charCount = text.replace(/\s/g, '').length
+
+        // セッション開始文字数の初期化（初回確定後）
+        if (sessionStartCharsRef.current === null && update.docChanged) {
+          sessionStartCharsRef.current = charCount
+        }
+        const sessionDelta = sessionStartCharsRef.current !== null
+          ? Math.max(0, charCount - sessionStartCharsRef.current)
+          : 0
+
+        setStatusInfo({ line: line.number, col: pos - line.from + 1, charCount, selText, sessionDelta })
       }
     })
 
@@ -545,10 +648,7 @@ function App(): JSX.Element {
           if (!popupRef.current) return false
           setPopup((p) =>
             p
-              ? {
-                  ...p,
-                  selectedIndex: (p.selectedIndex - 1 + p.candidates.length) % p.candidates.length
-                }
+              ? { ...p, selectedIndex: (p.selectedIndex - 1 + p.candidates.length) % p.candidates.length }
               : null
           )
           return true
@@ -576,6 +676,22 @@ function App(): JSX.Element {
       }
     ])
 
+    // Ctrl+F / Ctrl+H / Ctrl+G を最高優先で奪う（search() の組み込みバインドより先）
+    const searchKeymap = Prec.highest(keymap.of([
+      {
+        key: 'Mod-f',
+        run: () => { openSearchRef.current(false); return true }
+      },
+      {
+        key: 'Mod-h',
+        run: () => { openSearchRef.current(true); return true }
+      },
+      {
+        key: 'Mod-g',
+        run: () => { handleLineJumpRef.current(); return true }
+      }
+    ]))
+
     const domHandlers = EditorView.domEventHandlers({
       compositionstart: () => { isComposingRef.current = true; return false },
       compositionend: (_e, view) => {
@@ -596,8 +712,11 @@ function App(): JSX.Element {
       history(),
       lineNumbers(),
       highlightActiveLine(),
+      searchKeymap,
       popupKeymap,
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      // @codemirror/search: ハイライト機構のみ使用。パネルUIはカスタムReactパネルで代替
+      search({ createPanel: () => ({ dom: document.createElement('div') }) }),
       onUpdate,
       domHandlers,
       EditorView.theme({
@@ -611,11 +730,11 @@ function App(): JSX.Element {
           padding: '12px 16px',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-all',
-          caretColor: '#333'
+          caretColor: 'var(--kg-caret)'
         },
-        '.cm-gutters': { background: '#f8f8f8', borderRight: '1px solid #e0e0e0' },
-        '.cm-activeLineGutter': { background: '#eef' },
-        '.cm-activeLine': { background: '#f0f4ff' }
+        '.cm-gutters': { background: 'var(--kg-gutter-bg)', borderRight: '1px solid var(--kg-border)' },
+        '.cm-activeLineGutter': { background: 'var(--kg-active-gutter)' },
+        '.cm-activeLine': { background: 'var(--kg-active-line)' }
       }),
       EditorView.lineWrapping
     ]
@@ -689,114 +808,157 @@ function App(): JSX.Element {
 
   // ── 描画 ──────────────────────────────────────────────────────────────
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0 }}>
-      {/* タブバー */}
-      <div style={{
-        display: 'flex', alignItems: 'stretch',
-        background: '#e0e0e0', borderBottom: '1px solid #bbb',
-        overflowX: 'auto', flexShrink: 0, minHeight: 34
-      }}>
-        {tabs.map((tab) => {
-          const name = tab.filePath ? basename(tab.filePath) : '無題'
-          const isActive = tab.id === activeTabId
-          return (
-            <div
-              key={tab.id}
-              onClick={() => switchTab(tab.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 10px 5px 12px',
-                background: isActive ? '#fff' : 'transparent',
-                borderRight: '1px solid #bbb',
-                cursor: 'pointer', fontSize: 13,
-                color: tab.missing ? '#b71c1c' : '#222',
-                whiteSpace: 'nowrap',
-                boxShadow: isActive ? 'inset 0 2px 0 #4a90d9' : 'none',
-                userSelect: 'none'
-              }}
-            >
-              {tab.missing && <span title="ファイルが見つかりません">⚠</span>}
-              <span>{name}{tab.dirty ? ' *' : ''}</span>
-              <span
-                onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
-                title="閉じる"
-                style={{
-                  marginLeft: 3, fontSize: 15, lineHeight: 1,
-                  color: '#888', cursor: 'pointer', padding: '1px 3px',
-                  borderRadius: 3
-                }}
-              >×</span>
-            </div>
-          )
-        })}
-        <button
-          onClick={handleNew}
-          title="新しいタブ (Ctrl+N)"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '4px 12px', fontSize: 20, color: '#555',
-            lineHeight: 1, alignSelf: 'center'
-          }}
-        >+</button>
-      </div>
+  const displaySettings = settings?.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }
 
-      {/* ツールバー：辞書選択 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '4px 12px', background: '#f5f5f5', borderBottom: '1px solid #ddd',
-        fontSize: '13px', flexShrink: 0
-      }}>
-        <span>辞書:</span>
-        <select
-          value={activeDictName ?? ''}
-          onChange={(e) => handleDictChange(e.target.value)}
-          style={{ fontSize: '13px', padding: '2px 4px' }}
-        >
-          <option value="">（なし）</option>
-          {dictList.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-          <option disabled>──────</option>
-          <option value="__manage__">辞書を管理…</option>
-        </select>
-        <span style={{ color: '#aaa', fontSize: '12px' }}>Ctrl+D: 選択テキストを辞書に登録</span>
-        <div style={{ marginLeft: 'auto' }}>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0, background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)' }}>
+
+      {/* タブバー（集中モードでは非表示） */}
+      {!focusMode && (
+        <div style={{
+          display: 'flex', alignItems: 'stretch',
+          background: 'var(--kg-bg-tertiary)', borderBottom: '1px solid var(--kg-border-strong)',
+          overflowX: 'auto', flexShrink: 0, minHeight: 34
+        }}>
+          {tabs.map((tab) => {
+            const name = tab.filePath ? basename(tab.filePath) : '無題'
+            const isActive = tab.id === activeTabId
+            return (
+              <div
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px 5px 12px',
+                  background: isActive ? 'var(--kg-tab-active)' : 'transparent',
+                  borderRight: '1px solid var(--kg-border-strong)',
+                  cursor: 'pointer', fontSize: 13,
+                  color: tab.missing ? 'var(--kg-missing-text)' : 'var(--kg-text-primary)',
+                  whiteSpace: 'nowrap',
+                  boxShadow: isActive ? 'inset 0 2px 0 #4a90d9' : 'none',
+                  userSelect: 'none'
+                }}
+              >
+                {tab.missing && <span title="ファイルが見つかりません">⚠</span>}
+                <span>{name}{tab.dirty ? ' *' : ''}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
+                  title="閉じる"
+                  style={{
+                    marginLeft: 3, fontSize: 15, lineHeight: 1,
+                    color: 'var(--kg-text-muted)', cursor: 'pointer', padding: '1px 3px',
+                    borderRadius: 3
+                  }}
+                >×</span>
+              </div>
+            )
+          })}
           <button
-            onClick={() => setShowSettings(true)}
-            title="設定 (Ctrl+,)"
+            onClick={handleNew}
+            title="新しいタブ (Ctrl+N)"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 16, padding: '2px 6px', color: '#555', borderRadius: 3
+              padding: '4px 12px', fontSize: 20, color: 'var(--kg-text-secondary)',
+              lineHeight: 1, alignSelf: 'center'
             }}
-          >⚙</button>
+          >+</button>
         </div>
+      )}
+
+      {/* ツールバー（集中モードでは非表示） */}
+      {!focusMode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '4px 12px', background: 'var(--kg-bg-secondary)', borderBottom: '1px solid var(--kg-border)',
+          fontSize: '13px', flexShrink: 0
+        }}>
+          <span style={{ color: 'var(--kg-text-secondary)' }}>辞書:</span>
+          <select
+            value={activeDictName ?? ''}
+            onChange={(e) => handleDictChange(e.target.value)}
+            style={{ fontSize: '13px', padding: '2px 4px', background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)', border: '1px solid var(--kg-border-strong)', borderRadius: 3 }}
+          >
+            <option value="">（なし）</option>
+            {dictList.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+            <option disabled>──────</option>
+            <option value="__manage__">辞書を管理…</option>
+          </select>
+          <span style={{ color: 'var(--kg-text-muted)', fontSize: '12px' }}>Ctrl+D: 選択テキストを辞書に登録</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+            <button
+              onClick={() => openSearchRef.current(false)}
+              title="検索 (Ctrl+F)"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 6px', color: 'var(--kg-text-secondary)', borderRadius: 3 }}
+            >🔍</button>
+            <button
+              onClick={() => setShowSettings(true)}
+              title="設定 (Ctrl+,)"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px', color: 'var(--kg-text-secondary)', borderRadius: 3 }}
+            >⚙</button>
+          </div>
+        </div>
+      )}
+
+      {/* 検索・置換パネル（集中モードでは CSS で非表示。アンマウントしない=F11 でフォーカスが奪われない） */}
+      <div style={{ display: focusMode ? 'none' : undefined }}>
+        <SearchPanel
+          viewRef={viewRef}
+          show={showSearch}
+          showReplace={showReplace}
+          onToggleReplace={() => setShowReplace((v) => !v)}
+          onClose={() => {
+            setShowSearch(false)
+            setShowReplace(false)
+          }}
+        />
       </div>
 
       {/* エディタ本体 */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div ref={editorRef} style={{ width: '100%', height: '100%' }} />
 
+        {/* 集中モード中のヒント */}
+        {focusMode && (
+          <div style={{
+            position: 'absolute', bottom: 8, right: 12,
+            fontSize: 11, color: 'var(--kg-text-muted)', pointerEvents: 'none'
+          }}>
+            F11 で集中モード終了
+          </div>
+        )}
+
         {/* ファイルが見つからない場合のオーバーレイ */}
         {activeTab?.missing && (
           <div style={{
             position: 'absolute', inset: 0,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: '#fafafa', color: '#555'
+            background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-secondary)'
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>⚠</div>
-            <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#b71c1c', fontSize: 15 }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 8, color: 'var(--kg-missing-text)', fontSize: 15 }}>
               ファイルが見つかりませんでした
             </div>
-            <div style={{ color: '#777', fontSize: 13, marginBottom: 6, maxWidth: 500, textAlign: 'center', wordBreak: 'break-all' }}>
+            <div style={{ color: 'var(--kg-text-muted)', fontSize: 13, marginBottom: 6, maxWidth: 500, textAlign: 'center', wordBreak: 'break-all' }}>
               {activeTab.filePath}
             </div>
-            <div style={{ color: '#aaa', fontSize: 12 }}>
+            <div style={{ color: 'var(--kg-text-muted)', fontSize: 12 }}>
               ファイルが移動または削除された可能性があります
             </div>
           </div>
         )}
       </div>
+
+      {/* ステータスバー（集中モードでは非表示） */}
+      {!focusMode && (
+        <StatusBar
+          info={statusInfo}
+          showWritingStats={displaySettings.showWritingStats}
+          wordGoal={displaySettings.wordGoal}
+          onLineJump={handleLineJump}
+        />
+      )}
 
       {/* 変換候補ポップアップ */}
       {popup && (

@@ -81,15 +81,9 @@ const api = {
 
   // 設定
   settings: {
-    load: () =>
-      ipcRenderer.invoke('settings:load') as Promise<{
-        windowBounds: { x: number; y: number; width: number; height: number } | null
-        autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
-      }>,
-    save: (s: {
-      windowBounds: { x: number; y: number; width: number; height: number } | null
-      autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
-    }) => ipcRenderer.invoke('settings:save', s) as Promise<void>
+    load: () => ipcRenderer.invoke('settings:load') as Promise<import('../shared/settings-types').AppSettings>,
+    save: (s: import('../shared/settings-types').AppSettings) =>
+      ipcRenderer.invoke('settings:save', s) as Promise<void>
   },
 
   // 自動保存
