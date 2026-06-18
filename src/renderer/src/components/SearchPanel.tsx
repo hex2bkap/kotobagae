@@ -3,7 +3,8 @@ import { EditorView } from '@codemirror/view'
 import {
   SearchQuery, setSearchQuery,
   findNext, findPrevious, replaceNext, replaceAll,
-  openSearchPanel, closeSearchPanel
+  openSearchPanel, closeSearchPanel,
+  SearchCursor
 } from '@codemirror/search'
 
 interface Props {
@@ -14,13 +15,13 @@ interface Props {
   onClose: () => void
 }
 
-interface MatchInfo { total: number; current: number }
+interface MatchInfo { total: number; current: number; capped: boolean }
 
 export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClose }: Props): JSX.Element | null {
   const [query, setQuery] = useState('')
   const [replacement, setReplacement] = useState('')
   const [caseSensitive, setCaseSensitive] = useState(false)
-  const [matchInfo, setMatchInfo] = useState<MatchInfo>({ total: 0, current: 0 })
+  const [matchInfo, setMatchInfo] = useState<MatchInfo>({ total: 0, current: 0, capped: false })
   const searchInputRef = useRef<HTMLInputElement>(null)
   const replaceInputRef = useRef<HTMLInputElement>(null)
 
@@ -49,19 +50,44 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
     }
   }, [showReplace, show])
 
-  // CodeMirrorのハイライトを更新 + マッチ件数を取得
+  // SearchCursor で全文走査して総数・現在位置を取得（DOM 数えより正確）
+  const countWithCursor = useCallback((q: string, cs: boolean, view: EditorView): MatchInfo => {
+    if (!q) return { total: 0, current: 0, capped: false }
+
+    const normalize = cs ? undefined : (s: string) => s.toLowerCase()
+    const { from: selFrom, to: selTo } = view.state.selection.main
+    const cursor = new SearchCursor(view.state.doc, q, 0, undefined, normalize)
+
+    let total = 0
+    let current = 0
+    let capped = false
+
+    while (!cursor.next().done) {
+      total++
+      if (cursor.value.from === selFrom && cursor.value.to === selTo) {
+        current = total
+      }
+      if (total >= 1000) {
+        capped = true
+        break
+      }
+    }
+
+    return { total, current, capped }
+  }, [])
+
+  // クエリ変更時：CM の検索状態を更新し、最初のヒットへ自動移動（インクリメンタル検索）
   const updateSearchQuery = useCallback((q: string, cs: boolean) => {
     const view = viewRef.current
     if (!view) return
+
     view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: q, caseSensitive: cs })) })
-    // 次フレームでDOM確定後にカウント
-    requestAnimationFrame(() => {
-      const all = view.dom.querySelectorAll('.cm-searchMatch')
-      const selected = view.dom.querySelector('.cm-searchMatch.cm-searchMatch-selected')
-      const current = selected ? Array.from(all).indexOf(selected) + 1 : 0
-      setMatchInfo({ total: all.length, current })
-    })
-  }, [viewRef])
+
+    // 検索時に最初のヒットへ移動 → 「置換」が1回で効くようになる
+    if (q) findNext(view)
+
+    setMatchInfo(countWithCursor(q, cs, view))
+  }, [viewRef, countWithCursor])
 
   const handleQueryChange = useCallback((val: string) => {
     setQuery(val)
@@ -74,16 +100,12 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
     updateSearchQuery(query, next)
   }, [caseSensitive, query, updateSearchQuery])
 
+  // 移動・置換後に件数を再計算
   const refreshMatchInfo = useCallback(() => {
     const view = viewRef.current
     if (!view) return
-    requestAnimationFrame(() => {
-      const all = view.dom.querySelectorAll('.cm-searchMatch')
-      const selected = view.dom.querySelector('.cm-searchMatch.cm-searchMatch-selected')
-      const current = selected ? Array.from(all).indexOf(selected) + 1 : 0
-      setMatchInfo({ total: all.length, current })
-    })
-  }, [viewRef])
+    setMatchInfo(countWithCursor(query, caseSensitive, view))
+  }, [viewRef, query, caseSensitive, countWithCursor])
 
   const handleFindNext = useCallback(() => {
     const view = viewRef.current
@@ -113,8 +135,6 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
   const handleReplaceAll = useCallback(() => {
     const view = viewRef.current
     if (!view || !query) return
-    // @codemirror/search の replaceAll はアクティブな置換テキストを使う
-    // 先にクエリを置換テキスト付きで設定してから実行
     view.dispatch({ effects: setSearchQuery.of(new SearchQuery({
       search: query, replace: replacement, caseSensitive
     })) })
@@ -140,11 +160,15 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
   if (!show) return null
 
   const hasQuery = query.length > 0
-  const countText = hasQuery && matchInfo.total > 0
-    ? `${matchInfo.current} / ${matchInfo.total}`
-    : hasQuery && matchInfo.total === 0
+  const countText = hasQuery
+    ? matchInfo.total === 0
       ? '一致なし'
-      : ''
+      : matchInfo.current > 0
+        ? matchInfo.capped
+          ? `${matchInfo.current} / 999+`
+          : `${matchInfo.current} / ${matchInfo.total}`
+        : matchInfo.capped ? '999+件' : `${matchInfo.total}件`
+    : ''
 
   return (
     <div style={{
