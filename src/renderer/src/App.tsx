@@ -222,15 +222,18 @@ function App(): JSX.Element {
 
   // ── 変換候補ポップアップ ──────────────────────────────────────────────
 
-  const calcPopupPos = useCallback((view: EditorView): { top: number; left: number } => {
+  const calcPopupPos = useCallback((view: EditorView, candidatesCount: number): { top: number; left: number } => {
     const pos = view.state.selection.main.head
     const coords = view.coordsAtPos(pos)
     if (!coords) return { top: 0, left: 0 }
-    const POPUP_H = 320, POPUP_W = 180
+    // 実際の候補数から高さを計算（fontSize:15px + padding:4px×2 ≒ 28px/行）
+    const ITEM_H = 28, POPUP_H_MAX = 320, POPUP_W = 180
+    const actualH = Math.min(candidatesCount * ITEM_H + 2, POPUP_H_MAX)
     const viewRect = view.dom.getBoundingClientRect()
     let top = coords.bottom + 2
     let left = coords.left
-    if (top + POPUP_H > window.innerHeight - 8) top = coords.top - POPUP_H - 2
+    // 画面下端を超えるときだけ反転し、実高分だけ持ち上げる
+    if (top + actualH > window.innerHeight - 8) top = coords.top - actualH - 2
     if (left + POPUP_W > viewRect.right - 4) left = Math.max(viewRect.left + 4, viewRect.right - POPUP_W - 4)
     return { top, left }
   }, [])
@@ -245,7 +248,7 @@ function App(): JSX.Element {
       candidates: result.candidates,
       reading: result.reading,
       selectedIndex: 0,
-      position: calcPopupPos(view)
+      position: calcPopupPos(view, result.candidates.length)
     })
   }, [closePopup, calcPopupPos])
 
