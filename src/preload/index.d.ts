@@ -86,6 +86,10 @@ interface KotobagaeAPI {
     notifyListUpdated: () => Promise<void>
     onListUpdated: (cb: () => void) => () => void
   }
+  contextMenu: {
+    show: (hasSelection: boolean) => void
+    onDictRegister: (cb: () => void) => () => void
+  }
 }
 
 declare global {

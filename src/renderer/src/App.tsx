@@ -320,6 +320,21 @@ function App(): JSX.Element {
 
   handleQuickRegisterRef.current = handleQuickRegister
 
+  // ── 右クリックコンテキストメニュー ────────────────────────────────────────
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const view = viewRef.current
+    const hasSelection = view ? !view.state.selection.main.empty : false
+    window.api.contextMenu.show(hasSelection)
+  }, [])
+
+  useEffect(() => {
+    return window.api.contextMenu.onDictRegister(() => {
+      handleQuickRegisterRef.current()
+    })
+  }, [])
+
   // ── タブ操作 ─────────────────────────────────────────────────────────
 
   const makeNewTab = useCallback((): Tab => ({
@@ -920,7 +935,7 @@ function App(): JSX.Element {
 
       {/* エディタ本体 */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        <div ref={editorRef} style={{ width: '100%', height: '100%' }} />
+        <div ref={editorRef} style={{ width: '100%', height: '100%' }} onContextMenu={handleContextMenu} />
 
         {/* 集中モード中のヒント */}
         {focusMode && (

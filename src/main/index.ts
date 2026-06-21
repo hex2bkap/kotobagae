@@ -506,6 +506,23 @@ ipcMain.handle('dict:notifyListUpdated', () => {
   mainWindow?.webContents.send('dict:listUpdated')
 })
 
+// 右クリックコンテキストメニュー
+ipcMain.on('contextmenu:show', (_event, hasSelection: boolean) => {
+  const menu = Menu.buildFromTemplate([
+    { label: '切り取り', role: 'cut' },
+    { label: 'コピー', role: 'copy' },
+    { label: '貼り付け', role: 'paste' },
+    { label: 'すべて選択', role: 'selectAll' },
+    { type: 'separator' },
+    {
+      label: '辞書に登録',
+      enabled: hasSelection,
+      click: () => mainWindow?.webContents.send('contextmenu:dictRegister')
+    }
+  ])
+  menu.popup({ window: mainWindow ?? undefined })
+})
+
 // ── シングルインスタンス制御 ────────────────────────────────────────────────
 
 const gotLock = app.requestSingleInstanceLock()

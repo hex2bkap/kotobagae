@@ -150,6 +150,14 @@ const api = {
       ipcRenderer.on('dict:listUpdated', cb)
       return () => ipcRenderer.removeListener('dict:listUpdated', cb)
     }
+  },
+
+  contextMenu: {
+    show: (hasSelection: boolean) => ipcRenderer.send('contextmenu:show', hasSelection),
+    onDictRegister: (cb: () => void) => {
+      ipcRenderer.on('contextmenu:dictRegister', cb)
+      return () => ipcRenderer.removeListener('contextmenu:dictRegister', cb)
+    }
   }
 }
 
