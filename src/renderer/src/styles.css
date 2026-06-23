@@ -1,38 +1,94 @@
-/* ── テーマカラー（CSS変数） ─────────────────────────────────────────────── */
-:root {
-  --kg-bg-primary:    #ffffff;
-  --kg-bg-secondary:  #f5f5f5;
-  --kg-bg-tertiary:   #e0e0e0;
-  --kg-text-primary:  #222222;
-  --kg-text-secondary:#555555;
-  --kg-text-muted:    #aaaaaa;
-  --kg-border:        #dddddd;
-  --kg-border-strong: #bbbbbb;
-  --kg-gutter-bg:     #f8f8f8;
-  --kg-active-line:   #f0f4ff;
-  --kg-active-gutter: #eeeeff;
-  --kg-tab-active:    #ffffff;
+/* ── テーマカラー（CSS変数）────────────────────────────────────────────────── */
+
+/* ライト：中間色ニュートラル */
+:root,
+[data-theme="light"] {
+  --kg-titlebar-bg:   #F0F0EE;
+  --kg-bg-secondary:  #F0F0EE;
+  --kg-bg-primary:    #FAFAF8;
+  --kg-bg-tertiary:   #E8E8E6;
+  --kg-text-primary:  #1A1A1A;
+  --kg-text-secondary:#5A5650;
+  --kg-text-muted:    #96918A;
+  --kg-border:        #E0E0DC;
+  --kg-border-strong: #C4BEB6;
+  --kg-gutter-bg:     #F0F0EE;
+  --kg-active-line:   #EEEEE8;
+  --kg-active-gutter: #E8E8E4;
+  --kg-tab-active:    #FAFAF8;
   --kg-missing-text:  #b71c1c;
-  --kg-caret:         #333333;
-  --kg-accent:        #1976d2;
+  --kg-caret:         #1A1A1A;
+  --kg-accent:        #C03020;
+  --kg-accent-soft:   rgba(192,48,32,0.12);
+  --kg-selection:     rgba(192,48,32,0.18);
 }
 
+/* ダーク：温かみのある暗色 */
 [data-theme="dark"] {
-  --kg-bg-primary:    #1e1e1e;
-  --kg-bg-secondary:  #252526;
-  --kg-bg-tertiary:   #2d2d2d;
-  --kg-text-primary:  #d4d4d4;
-  --kg-text-secondary:#9d9d9d;
-  --kg-text-muted:    #666666;
-  --kg-border:        #3c3c3c;
-  --kg-border-strong: #555555;
-  --kg-gutter-bg:     #252526;
-  --kg-active-line:   #2a2d2e;
-  --kg-active-gutter: #2a2d2e;
-  --kg-tab-active:    #1e1e1e;
+  --kg-titlebar-bg:   #0E0C08;
+  --kg-bg-secondary:  #1E1914;
+  --kg-bg-primary:    #1C1814;
+  --kg-bg-tertiary:   #2A2018;
+  --kg-text-primary:  #DDD6C8;
+  --kg-text-secondary:#8A8478;
+  --kg-text-muted:    #5A5248;
+  --kg-border:        #2E2820;
+  --kg-border-strong: #3A3028;
+  --kg-gutter-bg:     #1A1610;
+  --kg-active-line:   #241E18;
+  --kg-active-gutter: #201C16;
+  --kg-tab-active:    #1C1814;
   --kg-missing-text:  #ef9a9a;
-  --kg-caret:         #aeafad;
-  --kg-accent:        #4a9eff;
+  --kg-caret:         #DDD6C8;
+  --kg-accent:        #C84830;
+  --kg-accent-soft:   rgba(200,72,48,0.18);
+  --kg-selection:     rgba(200,72,48,0.25);
+}
+
+/* 和紙：生成り温暖ライト（既定）*/
+[data-theme="washi"] {
+  --kg-titlebar-bg:   #231E1A;
+  --kg-bg-secondary:  #EBE6DA;
+  --kg-bg-primary:    #F5F0E6;
+  --kg-bg-tertiary:   #DDD8CC;
+  --kg-text-primary:  #1C1815;
+  --kg-text-secondary:#5A5650;
+  --kg-text-muted:    #96918A;
+  --kg-border:        #D4CEBC;
+  --kg-border-strong: #C4BEB6;
+  --kg-gutter-bg:     #EBE6DA;
+  --kg-active-line:   #EDE8D8;
+  --kg-active-gutter: #E4DFCF;
+  --kg-tab-active:    #F5F0E6;
+  --kg-missing-text:  #b71c1c;
+  --kg-caret:         #1C1815;
+  --kg-accent:        #C0391B;
+  --kg-accent-soft:   rgba(192,57,27,0.12);
+  --kg-selection:     rgba(192,57,27,0.18);
+  /* 和紙テーマはタイトルバーだけ暗色（墨色）*/
+  --kg-titlebar-text: #EBE6DA;
+}
+
+/* 墨夜：極暗・温暖 */
+[data-theme="sumi"] {
+  --kg-titlebar-bg:   #080604;
+  --kg-bg-secondary:  #181210;
+  --kg-bg-primary:    #14100C;
+  --kg-bg-tertiary:   #201810;
+  --kg-text-primary:  #D8D0C0;
+  --kg-text-secondary:#7A7268;
+  --kg-text-muted:    #4A4238;
+  --kg-border:        #1E1810;
+  --kg-border-strong: #2A2018;
+  --kg-gutter-bg:     #100E0A;
+  --kg-active-line:   #1C1610;
+  --kg-active-gutter: #18140E;
+  --kg-tab-active:    #14100C;
+  --kg-missing-text:  #ef9a9a;
+  --kg-caret:         #D8D0C0;
+  --kg-accent:        #C04028;
+  --kg-accent-soft:   rgba(192,64,40,0.18);
+  --kg-selection:     rgba(192,64,40,0.25);
 }
 
 /* ── ベースリセット ─────────────────────────────────────────────────────── */
@@ -46,16 +102,18 @@ body {
 
 /* ── 検索ハイライト ─────────────────────────────────────────────────────── */
 .cm-searchMatch {
-  background: rgba(255, 200, 0, 0.35);
+  background: rgba(200, 160, 0, 0.3);
   border-radius: 2px;
 }
 .cm-searchMatch.cm-searchMatch-selected {
-  background: rgba(240, 130, 0, 0.6);
+  background: rgba(192, 57, 27, 0.45);
 }
 
-[data-theme="dark"] .cm-searchMatch {
-  background: rgba(100, 80, 0, 0.6);
+[data-theme="dark"] .cm-searchMatch,
+[data-theme="sumi"] .cm-searchMatch {
+  background: rgba(200, 160, 0, 0.25);
 }
-[data-theme="dark"] .cm-searchMatch.cm-searchMatch-selected {
-  background: rgba(200, 120, 0, 0.6);
+[data-theme="dark"] .cm-searchMatch.cm-searchMatch-selected,
+[data-theme="sumi"] .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(200, 72, 48, 0.45);
 }

@@ -26,7 +26,17 @@ interface SettingsData {
   windowBounds: { x: number; y: number; width: number; height: number } | null
   autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
   dictSort: { byFrequency: boolean; showCount: boolean }
-  display: { theme: 'light' | 'dark'; showWritingStats: boolean; wordGoal: number }
+  display: {
+    theme: 'light' | 'dark' | 'washi' | 'sumi'
+    showWritingStats: boolean
+    wordGoal: number
+    fontSize: number
+    fontFamily: string
+    textColorLight: string
+    textColorDark: string
+    boldText: boolean
+    wordWrap: boolean
+  }
   dictPriorityOrder: string[]
   defaultDictNames: string[]
 }
@@ -57,6 +67,7 @@ interface KotobagaeAPI {
   onMenuSaveAs: (cb: () => void) => () => void
   onMenuSettings: (cb: () => void) => () => void
   onMenuAutosaveRestore: (cb: () => void) => () => void
+  onMenuDisplay: (cb: (action: string, value?: unknown) => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
   loadSession: () => Promise<{

@@ -57,6 +57,13 @@ const api = {
     return () => ipcRenderer.removeListener('menu:autosaveRestore', cb)
   },
 
+  onMenuDisplay: (cb: (action: string, value?: unknown) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, payload: { action: string; value?: unknown }) =>
+      cb(payload.action, payload.value)
+    ipcRenderer.on('menu:display', handler)
+    return () => ipcRenderer.removeListener('menu:display', handler)
+  },
+
   onBeforeClose: (cb: () => void) => {
     ipcRenderer.on('app:beforeClose', cb)
     return () => ipcRenderer.removeListener('app:beforeClose', cb)

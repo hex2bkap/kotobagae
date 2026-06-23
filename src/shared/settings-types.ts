@@ -11,9 +11,15 @@ export interface AppSettings {
     showCount: boolean
   }
   display: {
-    theme: 'light' | 'dark'
+    theme: 'light' | 'dark' | 'washi' | 'sumi'
     showWritingStats: boolean
     wordGoal: number  // 0 = 無効
+    fontSize: number          // px（既定 16）
+    fontFamily: string        // 既定 "Yu Gothic UI"
+    textColorLight: string    // ライト/和紙テーマ用文字色（既定 ''=テーマ既定値）
+    textColorDark: string     // ダーク/墨夜テーマ用文字色（既定 ''=テーマ既定値）
+    boldText: boolean         // 全文太字
+    wordWrap: boolean         // 折り返し
   }
   // M7: グローバル辞書優先度（管理画面で設定。先頭が最優先）
   dictPriorityOrder: string[]
@@ -26,7 +32,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dictWindowBounds: null,
   autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 },
   dictSort: { byFrequency: true, showCount: false },
-  display: { theme: 'light', showWritingStats: false, wordGoal: 0 },
+  display: {
+    theme: 'washi',
+    showWritingStats: false,
+    wordGoal: 0,
+    fontSize: 16,
+    fontFamily: 'Yu Gothic UI',
+    textColorLight: '',
+    textColorDark: '',
+    boldText: false,
+    wordWrap: true
+  },
   dictPriorityOrder: [],
   defaultDictNames: []
 }

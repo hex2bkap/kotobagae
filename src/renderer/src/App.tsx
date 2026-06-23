@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import React, { useEffect, useRef, useCallback, useState } from 'react'
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Extension, Prec } from '@codemirror/state'
+import { EditorState, Extension, Prec, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { search } from '@codemirror/search'
 import { CandidatePopup } from './components/CandidatePopup'
@@ -13,6 +13,7 @@ import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { RegisterModal } from './components/RegisterModal'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
+import { DEFAULT_SETTINGS } from '../../shared/settings-types'
 
 const APP_NAME = 'コトバガエ'
 const MAX_SEARCH_LEN = 10
@@ -97,10 +98,12 @@ function DictSelector({
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen((v) => !v)}
+        title={activeDictNames.length > 0 ? activeDictNames.join(', ') : '辞書なし'}
         style={{
           fontSize: '13px', padding: '2px 8px',
           background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)',
-          border: '1px solid var(--kg-border-strong)', borderRadius: 3, cursor: 'pointer'
+          border: '1px solid var(--kg-border-strong)', borderRadius: 3, cursor: 'pointer',
+          maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
         }}
       >
         {label} ▾
@@ -157,6 +160,37 @@ function DictSelector({
       )}
     </div>
   )
+}
+
+// CodeMirror の動的再構成用 Compartment（グローバル。App と同ライフタイム）
+const fontCompartment = new Compartment()
+const wrapCompartment = new Compartment()
+
+function buildFontTheme(s: AppSettings | null): Extension {
+  const disp = s?.display
+  const size = `${disp?.fontSize ?? 16}px`
+  const family = disp?.fontFamily
+    ? `"${disp.fontFamily}", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif`
+    : '"Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif'
+  const weight = disp?.boldText ? 'bold' : 'normal'
+  return EditorView.theme({
+    '&': { height: '100%', fontSize: size },
+    '.cm-scroller': { overflow: 'auto', fontFamily: family, lineHeight: '1.8' },
+    '.cm-content': {
+      padding: '12px 16px', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+      caretColor: 'var(--kg-caret)', fontWeight: weight
+    },
+    '.cm-gutters': { background: 'var(--kg-gutter-bg)', borderRight: '1px solid var(--kg-border)' },
+    '.cm-activeLineGutter': { background: 'var(--kg-active-gutter)' },
+    '.cm-activeLine': { background: 'var(--kg-active-line)' }
+  })
+}
+
+const tbBtnStyle: React.CSSProperties = {
+  background: 'none', border: 'none', cursor: 'pointer',
+  padding: '3px 8px', borderRadius: 3,
+  color: 'var(--kg-text-secondary)', fontSize: 13,
+  whiteSpace: 'nowrap'
 }
 
 function App(): JSX.Element {
@@ -219,12 +253,60 @@ function App(): JSX.Element {
   const priorityOrderRef = useRef<string[]>(priorityOrder)
   priorityOrderRef.current = priorityOrder
 
-  // ── テーマ適用 ──────────────────────────────────────────────────────────
+  // ── テーマ・文字色適用 ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (!settings) return
-    document.documentElement.dataset.theme = settings.display?.theme ?? 'light'
+    const theme = settings.display?.theme ?? 'washi'
+    document.documentElement.dataset.theme = theme
+    // テーマ別文字色の上書き（空 = テーマ既定のまま）
+    const isLightTheme = theme === 'light' || theme === 'washi'
+    const customColor = isLightTheme
+      ? (settings.display?.textColorLight ?? '')
+      : (settings.display?.textColorDark ?? '')
+    if (customColor) {
+      document.documentElement.style.setProperty('--kg-text-primary', customColor)
+    } else {
+      document.documentElement.style.removeProperty('--kg-text-primary')
+    }
   }, [settings])
+
+  // ── フォント・折り返し設定をエディタに反映 ──────────────────────────────
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || !settings) return
+    const wrapExt = settings.display?.wordWrap !== false ? EditorView.lineWrapping : []
+    view.dispatch({ effects: [
+      fontCompartment.reconfigure(buildFontTheme(settings)),
+      wrapCompartment.reconfigure(wrapExt)
+    ]})
+  }, [
+    settings?.display?.fontSize,
+    settings?.display?.fontFamily,
+    settings?.display?.boldText,
+    settings?.display?.wordWrap
+  ])
+
+  // ── メニュー「表示」からのコマンドを受け取る ─────────────────────────────
+
+  useEffect(() => {
+    const off = window.api.onMenuDisplay((action, value) => {
+      setSettings((prev) => {
+        if (!prev) return prev
+        const d = { ...prev.display }
+        if (action === 'theme') d.theme = value as AppSettings['display']['theme']
+        if (action === 'boldText') d.boldText = value as boolean
+        if (action === 'wordWrap') d.wordWrap = value as boolean
+        if (action === 'fontSizeUp') d.fontSize = Math.min(d.fontSize + 2, 40)
+        if (action === 'fontSizeDown') d.fontSize = Math.max(d.fontSize - 2, 10)
+        const next = { ...prev, display: d }
+        window.api.settings.save(next)
+        return next
+      })
+    })
+    return off
+  }, [])
 
   // ── タイトル（tabs / activeTabId の変化に追従）────────────────────────
 
@@ -243,7 +325,9 @@ function App(): JSX.Element {
         windowBounds: s.windowBounds,
         autosave: { ...s.autosave },
         dictSort: { ...s.dictSort },
-        display: { ...(s.display ?? { theme: 'light', showWritingStats: false, wordGoal: 0 }) }
+        display: { ...DEFAULT_SETTINGS.display, ...s.display },
+        dictPriorityOrder: s.dictPriorityOrder ?? [],
+        defaultDictNames: s.defaultDictNames ?? []
       })
     )
   }, [])
@@ -897,24 +981,10 @@ function App(): JSX.Element {
       search({ createPanel: () => ({ dom: document.createElement('div') }) }),
       onUpdate,
       domHandlers,
-      EditorView.theme({
-        '&': { height: '100%', fontSize: '16px' },
-        '.cm-scroller': {
-          overflow: 'auto',
-          fontFamily: '"Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif',
-          lineHeight: '1.8'
-        },
-        '.cm-content': {
-          padding: '12px 16px',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-          caretColor: 'var(--kg-caret)'
-        },
-        '.cm-gutters': { background: 'var(--kg-gutter-bg)', borderRight: '1px solid var(--kg-border)' },
-        '.cm-activeLineGutter': { background: 'var(--kg-active-gutter)' },
-        '.cm-activeLine': { background: 'var(--kg-active-line)' }
-      }),
-      EditorView.lineWrapping
+      // フォント・太字は設定に応じて動的再構成
+      fontCompartment.of(buildFontTheme(null)),
+      // 折り返しは設定に応じて動的再構成（既定: on）
+      wrapCompartment.of(EditorView.lineWrapping)
     ]
     extensionsRef.current = sharedExtensions
 
@@ -1048,14 +1118,23 @@ function App(): JSX.Element {
         </div>
       )}
 
-      {/* ツールバー（集中モードでは非表示） */}
+      {/* ツールバー（集中モードでは非表示）*/}
+      {/* 構成: [新規][開く][保存] | 辞書DD | [検索][集中][設定] */}
       {!focusMode && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '4px 12px', background: 'var(--kg-bg-secondary)', borderBottom: '1px solid var(--kg-border)',
+          display: 'flex', alignItems: 'center', gap: 2,
+          padding: '3px 8px', background: 'var(--kg-bg-secondary)', borderBottom: '1px solid var(--kg-border)',
           fontSize: '13px', flexShrink: 0
         }}>
-          <span style={{ color: 'var(--kg-text-secondary)' }}>辞書:</span>
+          {/* 左グループ: ファイル操作 */}
+          <button onClick={handleNew} title="新規 (Ctrl+N)" style={tbBtnStyle}>新規</button>
+          <button onClick={handleOpen} title="開く (Ctrl+O)" style={tbBtnStyle}>開く</button>
+          <button onClick={handleSave} title="保存 (Ctrl+S)" style={tbBtnStyle}>保存</button>
+
+          {/* セパレータ */}
+          <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
+
+          {/* 辞書ドロップダウン */}
           <DictSelector
             dictList={dictList}
             priorityOrder={priorityOrder}
@@ -1063,18 +1142,26 @@ function App(): JSX.Element {
             onToggle={handleDictToggle}
             onOpenManager={() => window.api.dict.openManager()}
           />
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-            <button
-              onClick={() => openSearchRef.current(false)}
-              title="検索 (Ctrl+F)"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 6px', color: 'var(--kg-text-secondary)', borderRadius: 3 }}
-            >🔍</button>
-            <button
-              onClick={() => setShowSettings(true)}
-              title="設定 (Ctrl+,)"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px', color: 'var(--kg-text-secondary)', borderRadius: 3 }}
-            >⚙</button>
-          </div>
+
+          {/* セパレータ */}
+          <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
+
+          {/* 右グループ: 表示操作 */}
+          <button
+            onClick={() => openSearchRef.current(false)}
+            title="検索 (Ctrl+F)"
+            style={tbBtnStyle}
+          >検索</button>
+          <button
+            onClick={() => setFocusMode((v) => !v)}
+            title="集中モード (F11)"
+            style={tbBtnStyle}
+          >集中</button>
+          <button
+            onClick={() => setShowSettings(true)}
+            title="設定 (Ctrl+,)"
+            style={tbBtnStyle}
+          >⚙</button>
         </div>
       )}
 

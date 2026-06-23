@@ -72,7 +72,13 @@ function loadSettings(): AppSettings {
       display: {
         theme: p.display?.theme ?? DEFAULT_SETTINGS.display.theme,
         showWritingStats: p.display?.showWritingStats ?? DEFAULT_SETTINGS.display.showWritingStats,
-        wordGoal: p.display?.wordGoal ?? DEFAULT_SETTINGS.display.wordGoal
+        wordGoal: p.display?.wordGoal ?? DEFAULT_SETTINGS.display.wordGoal,
+        fontSize: p.display?.fontSize ?? DEFAULT_SETTINGS.display.fontSize,
+        fontFamily: p.display?.fontFamily ?? DEFAULT_SETTINGS.display.fontFamily,
+        textColorLight: p.display?.textColorLight ?? DEFAULT_SETTINGS.display.textColorLight,
+        textColorDark: p.display?.textColorDark ?? DEFAULT_SETTINGS.display.textColorDark,
+        boldText: p.display?.boldText ?? DEFAULT_SETTINGS.display.boldText,
+        wordWrap: p.display?.wordWrap ?? DEFAULT_SETTINGS.display.wordWrap
       },
       dictPriorityOrder: Array.isArray(p.dictPriorityOrder) ? p.dictPriorityOrder : [],
       defaultDictNames: Array.isArray(p.defaultDictNames) ? p.defaultDictNames : []
@@ -213,6 +219,44 @@ function buildMenu(): void {
         { label: 'コピー', role: 'copy' },
         { label: '貼り付け', role: 'paste' },
         { label: 'すべて選択', role: 'selectAll' }
+      ]
+    },
+    {
+      label: '表示',
+      submenu: [
+        {
+          label: 'フォントサイズを大きく',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => mainWindow?.webContents.send('menu:display', { action: 'fontSizeUp' })
+        },
+        {
+          label: 'フォントサイズを小さく',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => mainWindow?.webContents.send('menu:display', { action: 'fontSizeDown' })
+        },
+        { type: 'separator' },
+        {
+          label: '本文を太字で表示',
+          type: 'checkbox',
+          checked: currentSettings.display.boldText,
+          click: (item) => mainWindow?.webContents.send('menu:display', { action: 'boldText', value: item.checked })
+        },
+        {
+          label: '折り返し',
+          type: 'checkbox',
+          checked: currentSettings.display.wordWrap,
+          click: (item) => mainWindow?.webContents.send('menu:display', { action: 'wordWrap', value: item.checked })
+        },
+        { type: 'separator' },
+        {
+          label: 'テーマ',
+          submenu: [
+            { label: '和紙（Washi）', type: 'radio', checked: currentSettings.display.theme === 'washi', click: () => mainWindow?.webContents.send('menu:display', { action: 'theme', value: 'washi' }) },
+            { label: 'ダーク（Dark）', type: 'radio', checked: currentSettings.display.theme === 'dark', click: () => mainWindow?.webContents.send('menu:display', { action: 'theme', value: 'dark' }) },
+            { label: 'ライト（Light）', type: 'radio', checked: currentSettings.display.theme === 'light', click: () => mainWindow?.webContents.send('menu:display', { action: 'theme', value: 'light' }) },
+            { label: '墨夜（Sumi）', type: 'radio', checked: currentSettings.display.theme === 'sumi', click: () => mainWindow?.webContents.send('menu:display', { action: 'theme', value: 'sumi' }) }
+          ]
+        }
       ]
     },
     {
