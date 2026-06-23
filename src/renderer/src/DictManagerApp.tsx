@@ -294,6 +294,16 @@ export function DictManagerApp(): JSX.Element {
         setSelectedDict(initial)
         await reloadDictData(initial)
       }
+    }).catch((err) => {
+      // いずれかの IPC が reject した場合でも辞書リストだけは表示する
+      console.error('[DictManager] 初期ロード失敗:', err)
+      window.api.dict.listDicts().then((list) => {
+        setDicts(list)
+        if (list[0]) {
+          setSelectedDict(list[0])
+          reloadDictData(list[0])
+        }
+      }).catch((e) => console.error('[DictManager] listDicts も失敗:', e))
     })
   }, [reloadDictData])
 

@@ -143,7 +143,7 @@ function DictSelector({
                 {isPrimary && (
                   <span title="この辞書に登録されます" style={{ fontSize: 9, color: '#c00', fontWeight: 'bold' }}>●</span>
                 )}
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                <span title={name} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
               </label>
             )
           })}
@@ -281,12 +281,8 @@ function App(): JSX.Element {
       fontCompartment.reconfigure(buildFontTheme(settings)),
       wrapCompartment.reconfigure(wrapExt)
     ]})
-  }, [
-    settings?.display?.fontSize,
-    settings?.display?.fontFamily,
-    settings?.display?.boldText,
-    settings?.display?.wordWrap
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings])  // settings 全体を監視（個別フィールドでは初回ロード時の view未生成を検出できない）
 
   // ── メニュー「表示」からのコマンドを受け取る ─────────────────────────────
 
@@ -731,6 +727,12 @@ function App(): JSX.Element {
       const result = await window.api.saveFile(activeTab.filePath, content)
       if (!result.success) return
       setTabs((prev) => prev.map((t) => (t.id === activeId ? { ...t, dirty: false } : t)))
+      // 保存成功フィードバック: タイトルバーに「保存しました」を1.5秒表示
+      const name = activeTab.filePath ? basename(activeTab.filePath) : '無題'
+      window.api.setTitle(`${APP_NAME} — ${name} [保存しました]`)
+      setTimeout(() => {
+        window.api.setTitle(`${APP_NAME} — ${name}`)
+      }, 1500)
     }
   }, [])
 
