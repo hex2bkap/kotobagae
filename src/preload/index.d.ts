@@ -1,14 +1,20 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
-interface SearchResult {
+interface CandidateWithSource {
+  word: string
+  dictName: string
+}
+
+interface MultiSearchResult {
   reading: string
-  candidates: string[]
+  candidates: CandidateWithSource[]
 }
 
 interface SessionTab {
   filePath: string | null
   cursorPos: number
-  dictName: string | null
+  dictNames: string[]
+  dictName?: string | null
 }
 
 interface SessionData {
@@ -21,6 +27,8 @@ interface SettingsData {
   autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
   dictSort: { byFrequency: boolean; showCount: boolean }
   display: { theme: 'light' | 'dark'; showWritingStats: boolean; wordGoal: number }
+  dictPriorityOrder: string[]
+  defaultDictNames: string[]
 }
 
 interface AutosaveFileInfo {
@@ -51,8 +59,11 @@ interface KotobagaeAPI {
   onMenuAutosaveRestore: (cb: () => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
-  loadSession: () => Promise<SessionData | null>
-  saveSession: (data: SessionData) => Promise<void>
+  loadSession: () => Promise<{
+    tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[]; dictName?: string | null }>
+    activeTabIndex: number
+  } | null>
+  saveSession: (data: { tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[] }>; activeTabIndex: number }) => Promise<void>
   settings: {
     load: () => Promise<SettingsData>
     save: (s: SettingsData) => Promise<void>
@@ -65,10 +76,12 @@ interface KotobagaeAPI {
   openDataDir: () => void
   dict: {
     listDicts: () => Promise<string[]>
-    getActiveDict: () => Promise<string | null>
-    setActiveDict: (name: string | null) => Promise<void>
-    getCandidates: (textBeforeCursor: string) => Promise<SearchResult | null>
-    addEntry: (reading: string, candidates: string[]) => Promise<boolean>
+    getActiveDicts: () => Promise<string[]>
+    setActiveDicts: (names: string[]) => Promise<void>
+    getCandidates: (textBeforeCursor: string) => Promise<MultiSearchResult | null>
+    addEntry: (dictName: string, reading: string, candidates: string[]) => Promise<boolean>
+    getPriorityOrder: () => Promise<string[]>
+    setPriorityOrder: (order: string[]) => Promise<void>
     createDict: (name: string) => Promise<boolean>
     openManager: () => Promise<void>
     getDictData: (name: string) => Promise<Record<string, DictEntryInfo[]>>

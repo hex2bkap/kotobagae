@@ -8,7 +8,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as chardet from 'chardet'
 import * as iconv from 'iconv-lite'
 import { DictManager } from '../shared/dict/DictManager'
-import { searchCandidates, sortCandidates } from '../shared/dict/engine'
+import { searchMultiDicts } from '../shared/dict/engine'
 import type { AppSettings, AutosaveFileInfo } from '../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../shared/settings-types'
 
@@ -17,7 +17,7 @@ import { DEFAULT_SETTINGS } from '../shared/settings-types'
 let mainWindow: BrowserWindow | null = null
 let dictWindow: BrowserWindow | null = null
 let dictManager: DictManager | null = null
-let activeDictName: string | null = null
+let activeDictNames: string[] = []
 let dataDir = ''
 let currentSettings: AppSettings = { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave } }
 let saveBoundsTimer: NodeJS.Timeout | null = null
@@ -27,7 +27,9 @@ let saveBoundsTimer: NodeJS.Timeout | null = null
 interface SessionTab {
   filePath: string | null
   cursorPos: number
-  dictName: string | null
+  dictNames: string[]
+  // M7移行: 旧セッションの dictName: string|null も読めるようにする
+  dictName?: string | null
 }
 interface SessionData {
   tabs: SessionTab[]
@@ -71,7 +73,9 @@ function loadSettings(): AppSettings {
         theme: p.display?.theme ?? DEFAULT_SETTINGS.display.theme,
         showWritingStats: p.display?.showWritingStats ?? DEFAULT_SETTINGS.display.showWritingStats,
         wordGoal: p.display?.wordGoal ?? DEFAULT_SETTINGS.display.wordGoal
-      }
+      },
+      dictPriorityOrder: Array.isArray(p.dictPriorityOrder) ? p.dictPriorityOrder : [],
+      defaultDictNames: Array.isArray(p.defaultDictNames) ? p.defaultDictNames : []
     }
   } catch {
     return { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave }, display: { ...DEFAULT_SETTINGS.display } }
@@ -428,25 +432,36 @@ ipcMain.on('shell:openDataDir', () => { shell.openPath(dataDir) })
 // 辞書
 
 ipcMain.handle('dict:listDicts', () => dictManager?.listDicts() ?? [])
-ipcMain.handle('dict:getActiveDict', () => activeDictName)
-ipcMain.handle('dict:setActiveDict', (_event, name: string | null) => { activeDictName = name })
+ipcMain.handle('dict:getActiveDicts', () => activeDictNames)
+ipcMain.handle('dict:setActiveDicts', (_event, names: string[]) => { activeDictNames = names })
 ipcMain.handle('dict:getCandidates', (_event, textBeforeCursor: string) => {
-  if (!dictManager || !activeDictName) return null
-  const dict = dictManager.getDict(activeDictName)
-  const result = searchCandidates(textBeforeCursor, dict)
-  if (!result) return null
-  const entries = dict[result.reading] ?? []
+  if (!dictManager || activeDictNames.length === 0) return null
+  // グローバル優先度順で辞書を並べる
+  const priorityOrder = currentSettings.dictPriorityOrder
+  const ordered = activeDictNames.slice().sort((a, b) => {
+    const ia = priorityOrder.indexOf(a)
+    const ib = priorityOrder.indexOf(b)
+    const ra = ia === -1 ? Infinity : ia
+    const rb = ib === -1 ? Infinity : ib
+    return ra - rb
+  })
+  const dicts = ordered.map((name) => ({ name, dict: dictManager!.getDict(name) }))
   const byFrequency = currentSettings.dictSort?.byFrequency ?? true
-  return { reading: result.reading, candidates: sortCandidates(entries, byFrequency) }
+  return searchMultiDicts(textBeforeCursor, dicts, 10, byFrequency)
 })
-ipcMain.handle('dict:addEntry', (_event, reading: string, candidates: string[]) => {
-  if (!dictManager || !activeDictName) return false
-  dictManager.addEntry(activeDictName, reading, candidates)
+ipcMain.handle('dict:addEntry', (_event, dictName: string, reading: string, candidates: string[]) => {
+  if (!dictManager || !dictName) return false
+  dictManager.addEntry(dictName, reading, candidates)
   return true
 })
 ipcMain.handle('dict:createDict', (_event, name: string) => dictManager?.createDict(name) ?? false)
 ipcMain.handle('dict:recordUsage', (_event, dictName: string, reading: string, word: string) => {
   dictManager?.recordUsage(dictName, reading, word)
+})
+ipcMain.handle('dict:getPriorityOrder', () => currentSettings.dictPriorityOrder)
+ipcMain.handle('dict:setPriorityOrder', (_event, order: string[]) => {
+  currentSettings = { ...currentSettings, dictPriorityOrder: order }
+  saveSettings(currentSettings)
 })
 
 // 辞書管理ウィンドウ操作

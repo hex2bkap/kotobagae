@@ -10,11 +10,13 @@ import { SettingsModal } from './components/SettingsModal'
 import { AutosaveRestoreModal } from './components/AutosaveRestoreModal'
 import { SearchPanel } from './components/SearchPanel'
 import { StatusBar, type StatusInfo } from './components/StatusBar'
+import { RegisterModal } from './components/RegisterModal'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
 
 const APP_NAME = 'コトバガエ'
 const MAX_SEARCH_LEN = 10
+const MAX_ACTIVE_DICTS = 5
 
 interface Tab {
   id: string
@@ -22,11 +24,16 @@ interface Tab {
   editorState: EditorState
   dirty: boolean
   missing: boolean
-  dictName: string | null
+  dictNames: string[]  // per-tab 有効辞書（グローバル優先度順）
+}
+
+interface CandidateWithSource {
+  word: string
+  dictName: string
 }
 
 interface PopupState {
-  candidates: string[]
+  candidates: CandidateWithSource[]
   reading: string
   selectedIndex: number
   position: { top: number; left: number }
@@ -35,6 +42,121 @@ interface PopupState {
 let _tabIdCounter = 0
 function newTabId(): string {
   return `t${++_tabIdCounter}`
+}
+
+// 辞書名リストをグローバル優先度順にソートする（優先度未登録は末尾に）
+function sortByPriority(names: string[], order: string[]): string[] {
+  return names.slice().sort((a, b) => {
+    const ia = order.indexOf(a)
+    const ib = order.indexOf(b)
+    const ra = ia === -1 ? Infinity : ia
+    const rb = ib === -1 ? Infinity : ib
+    return ra - rb
+  })
+}
+
+// ── 辞書セレクタ（複数選択チェックボックスドロップダウン） ─────────────────
+
+function DictSelector({
+  dictList,
+  priorityOrder,
+  activeDictNames,
+  onToggle,
+  onOpenManager
+}: {
+  dictList: string[]
+  priorityOrder: string[]
+  activeDictNames: string[]
+  onToggle: (name: string, checked: boolean) => void
+  onOpenManager: () => void
+}): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // 外クリックで閉じる
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  // ラベル表示：「辞書名 +N」or「（なし）」
+  const label = activeDictNames.length === 0
+    ? '（なし）'
+    : activeDictNames.length === 1
+    ? activeDictNames[0]
+    : `${activeDictNames[0]} +${activeDictNames.length - 1}`
+
+  // 全辞書を優先度順で並べて表示
+  const orderedAll = sortByPriority(dictList, priorityOrder)
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          fontSize: '13px', padding: '2px 8px',
+          background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)',
+          border: '1px solid var(--kg-border-strong)', borderRadius: 3, cursor: 'pointer'
+        }}
+      >
+        {label} ▾
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 2px)', left: 0, zIndex: 1000,
+          background: 'var(--kg-bg-primary)', border: '1px solid var(--kg-border-strong)',
+          borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          minWidth: 180, maxWidth: 280
+        }}>
+          {orderedAll.length === 0 && (
+            <div style={{ padding: '6px 10px', fontSize: 12, color: 'var(--kg-text-muted)' }}>辞書がありません</div>
+          )}
+          {orderedAll.map((name, i) => {
+            const isActive = activeDictNames.includes(name)
+            const isPrimary = activeDictNames[0] === name
+            const disabled = !isActive && activeDictNames.length >= MAX_ACTIVE_DICTS
+            return (
+              <label
+                key={name}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', cursor: disabled ? 'not-allowed' : 'pointer',
+                  fontSize: 13, opacity: disabled ? 0.5 : 1,
+                  borderBottom: i < orderedAll.length - 1 ? '1px solid var(--kg-border)' : undefined
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  disabled={disabled}
+                  onChange={(e) => onToggle(name, e.target.checked)}
+                  style={{ margin: 0 }}
+                />
+                {isPrimary && (
+                  <span title="この辞書に登録されます" style={{ fontSize: 9, color: '#c00', fontWeight: 'bold' }}>●</span>
+                )}
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+              </label>
+            )
+          })}
+          <div style={{ borderTop: '1px solid var(--kg-border-strong)', padding: '4px 8px' }}>
+            <button
+              onClick={() => { setOpen(false); onOpenManager() }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12, color: 'var(--kg-text-secondary)', padding: '2px 0'
+              }}
+            >辞書を管理…</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function App(): JSX.Element {
@@ -46,6 +168,7 @@ function App(): JSX.Element {
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [dictList, setDictList] = useState<string[]>([])
+  const [priorityOrder, setPriorityOrder] = useState<string[]>([])
   const [popup, setPopup] = useState<PopupState | null>(null)
   const [modal, setModal] = useState<{
     message: string
@@ -60,6 +183,10 @@ function App(): JSX.Element {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showAutosaveRestore, setShowAutosaveRestore] = useState(false)
+  const [registerState, setRegisterState] = useState<{
+    selectedText: string
+    activeDictNames: string[]
+  } | null>(null)
 
   // 検索パネル
   const [showSearch, setShowSearch] = useState(false)
@@ -83,9 +210,14 @@ function App(): JSX.Element {
   popupRef.current = popup
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
-  const activeDictName = activeTab?.dictName ?? null
-  const activeDictNameRef = useRef<string | null>(activeDictName)
-  activeDictNameRef.current = activeDictName
+  const activeDictNames = activeTab?.dictNames ?? []
+  const activeDictNamesRef = useRef<string[]>(activeDictNames)
+  activeDictNamesRef.current = activeDictNames
+  // 優先トップの辞書（登録先の既定）
+  const primaryDictName = activeDictNames[0] ?? null
+
+  const priorityOrderRef = useRef<string[]>(priorityOrder)
+  priorityOrderRef.current = priorityOrder
 
   // ── テーマ適用 ──────────────────────────────────────────────────────────
 
@@ -137,12 +269,24 @@ function App(): JSX.Element {
     return () => clearInterval(timer)
   }, [settings?.autosave.enabled, settings?.autosave.intervalMinutes])
 
-  // ── 辞書一覧（初回＋管理ウィンドウからの更新通知で再取得）──────────────
+  // ── 辞書一覧＋優先度（初回＋管理ウィンドウからの更新通知で再取得）────────
 
   useEffect(() => {
-    window.api.dict.listDicts().then(setDictList)
+    Promise.all([
+      window.api.dict.listDicts(),
+      window.api.dict.getPriorityOrder()
+    ]).then(([dicts, order]) => {
+      setDictList(dicts)
+      setPriorityOrder(order)
+    })
     return window.api.dict.onListUpdated(() => {
-      window.api.dict.listDicts().then(setDictList)
+      Promise.all([
+        window.api.dict.listDicts(),
+        window.api.dict.getPriorityOrder()
+      ]).then(([dicts, order]) => {
+        setDictList(dicts)
+        setPriorityOrder(order)
+      })
     })
   }, [])
 
@@ -256,15 +400,15 @@ function App(): JSX.Element {
     const view = viewRef.current
     const p = popupRef.current
     if (!view || !p) return
-    const word = p.candidates[index]
+    const candidate = p.candidates[index]
+    const { word, dictName } = candidate
     const pos = view.state.selection.main.head
     const from = pos - p.reading.length
     view.dispatch({
       changes: { from, to: pos, insert: word },
       selection: { anchor: from + word.length }
     })
-    const dictName = activeDictNameRef.current
-    if (dictName) window.api.dict.recordUsage(dictName, p.reading, word)
+    window.api.dict.recordUsage(dictName, p.reading, word)
     closePopup()
     view.focus()
   }, [closePopup])
@@ -284,39 +428,46 @@ function App(): JSX.Element {
     setShowReplace(withReplace)
   }
 
-  // ── 簡易登録 ─────────────────────────────────────────────────────────
+  // ── 簡易登録（RegisterModal を使う） ────────────────────────────────
 
-  const handleQuickRegister = useCallback(async () => {
+  const handleQuickRegister = useCallback(() => {
     const view = viewRef.current
     if (!view) return
     const { from, to } = view.state.selection.main
     if (from === to) return
     const selectedText = view.state.doc.sliceString(from, to)
+    const currentDictNames = activeDictNamesRef.current
+    setRegisterState({ selectedText, activeDictNames: currentDictNames })
+  }, [])
 
-    const activeId = activeTabIdRef.current
-    const activeTab = tabsRef.current.find((t) => t.id === activeId)
-    if (!activeTab) return
+  const handleRegisterOk = useCallback(async (targetDict: string, reading: string) => {
+    const view = viewRef.current
+    const registerInfo = registerState
+    if (!registerInfo) return
 
-    let dictName = activeTab.dictName
+    setRegisterState(null)
 
-    if (!dictName) {
-      const newName = await showInput('登録先の辞書がありません。辞書名を入力してください:')
-      if (!newName) { view.focus(); return }
-      const ok = await window.api.dict.createDict(newName)
-      if (!ok) { view.focus(); return }
-      setDictList((prev) => [...prev, newName].sort())
-      dictName = newName
-      setTabs((prev) =>
-        prev.map((t) => (t.id === activeId ? { ...t, dictName: newName } : t))
-      )
-      await window.api.dict.setActiveDict(newName)
+    // 辞書が存在しない場合は新規作成
+    const allDicts = dictList
+    let dictName = targetDict
+    if (!allDicts.includes(targetDict)) {
+      const ok = await window.api.dict.createDict(targetDict)
+      if (!ok) { view?.focus(); return }
+      setDictList((prev) => [...prev, targetDict].sort())
+      dictName = targetDict
+      // 新規作成した辞書をアクティブに追加
+      const activeId = activeTabIdRef.current
+      const tab = tabsRef.current.find((t) => t.id === activeId)
+      if (tab && !tab.dictNames.includes(dictName)) {
+        const newNames = sortByPriority([...tab.dictNames, dictName], priorityOrderRef.current)
+        setTabs((prev) => prev.map((t) => t.id === activeId ? { ...t, dictNames: newNames } : t))
+        await window.api.dict.setActiveDicts(newNames)
+      }
     }
 
-    const reading = await showInput(`「${selectedText}」の読みを入力してください:`)
-    if (!reading) { view.focus(); return }
-    await window.api.dict.addEntry(reading, [selectedText])
-    view.focus()
-  }, [showInput])
+    await window.api.dict.addEntry(dictName, reading, [registerInfo.selectedText])
+    view?.focus()
+  }, [registerState, dictList])
 
   handleQuickRegisterRef.current = handleQuickRegister
 
@@ -343,10 +494,13 @@ function App(): JSX.Element {
     editorState: EditorState.create({ doc: '', extensions: extensionsRef.current! }),
     dirty: false,
     missing: false,
-    dictName: null
-  }), [])
+    dictNames: sortByPriority(
+      (settings?.defaultDictNames ?? []).filter((n) => dictList.includes(n)),
+      priorityOrderRef.current
+    )
+  }), [settings, dictList])
 
-  const makeMissingTab = useCallback((filePath: string, dictName: string | null): Tab => ({
+  const makeMissingTab = useCallback((filePath: string, dictNames: string[]): Tab => ({
     id: newTabId(),
     filePath,
     editorState: EditorState.create({
@@ -355,7 +509,7 @@ function App(): JSX.Element {
     }),
     dirty: false,
     missing: true,
-    dictName
+    dictNames
   }), [])
 
   const switchTab = useCallback(async (newId: string) => {
@@ -375,7 +529,7 @@ function App(): JSX.Element {
 
     setActiveTabId(newId)
     view.setState(newTab.editorState)
-    await window.api.dict.setActiveDict(newTab.dictName)
+    await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view.focus()
   }, [])
@@ -401,7 +555,7 @@ function App(): JSX.Element {
       setTabs([newTab])
       setActiveTabId(newTab.id)
       viewRef.current?.setState(newTab.editorState)
-      await window.api.dict.setActiveDict(null)
+      await window.api.dict.setActiveDicts(newTab.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
       return
@@ -412,7 +566,7 @@ function App(): JSX.Element {
       const next = remaining[Math.min(idx, remaining.length - 1)]
       setActiveTabId(next.id)
       viewRef.current?.setState(next.editorState)
-      await window.api.dict.setActiveDict(next.dictName)
+      await window.api.dict.setActiveDicts(next.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
     }
@@ -423,12 +577,12 @@ function App(): JSX.Element {
   const openFileAsNewTab = useCallback(async (
     filePath: string,
     content: string,
-    dictName: string | null = null
+    dictNames: string[] = []
   ) => {
     const state = EditorState.create({ doc: content, extensions: extensionsRef.current! })
     const newTab: Tab = {
       id: newTabId(), filePath, editorState: state,
-      dirty: false, missing: false, dictName
+      dirty: false, missing: false, dictNames
     }
     const view = viewRef.current
     const currentId = activeTabIdRef.current
@@ -442,7 +596,7 @@ function App(): JSX.Element {
     })
     setActiveTabId(newTab.id)
     view?.setState(newTab.editorState)
-    await window.api.dict.setActiveDict(dictName)
+    await window.api.dict.setActiveDicts(dictNames)
     closePopupRef.current()
     view?.focus()
   }, [])
@@ -461,7 +615,7 @@ function App(): JSX.Element {
     })
     setActiveTabId(newTab.id)
     view?.setState(newTab.editorState)
-    await window.api.dict.setActiveDict(null)
+    await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view?.focus()
   }, [makeNewTab])
@@ -513,7 +667,7 @@ function App(): JSX.Element {
     const state = EditorState.create({ doc: content, extensions: extensionsRef.current! })
     const newTab: Tab = {
       id: newTabId(), filePath: null, editorState: state,
-      dirty: true, missing: false, dictName: null
+      dirty: true, missing: false, dictNames: []
     }
     const view = viewRef.current
     const currentId = activeTabIdRef.current
@@ -526,22 +680,28 @@ function App(): JSX.Element {
     })
     setActiveTabId(newTab.id)
     view?.setState(newTab.editorState)
-    await window.api.dict.setActiveDict(null)
+    await window.api.dict.setActiveDicts([])
     closePopupRef.current()
     view?.focus()
   }, [])
 
-  const handleDictChange = useCallback(async (name: string) => {
-    if (name === '__manage__') {
-      await window.api.dict.openManager()
-      return
-    }
+  // ── 辞書トグル（チェックボックスドロップダウンから呼ばれる）───────────────
+
+  const handleDictToggle = useCallback(async (name: string, checked: boolean) => {
     const activeId = activeTabIdRef.current
-    const newName = name === '' ? null : name
-    setTabs((prev) =>
-      prev.map((t) => (t.id === activeId ? { ...t, dictName: newName } : t))
-    )
-    await window.api.dict.setActiveDict(newName)
+    const tab = tabsRef.current.find((t) => t.id === activeId)
+    if (!tab) return
+
+    let newNames: string[]
+    if (checked) {
+      if (tab.dictNames.length >= MAX_ACTIVE_DICTS) return
+      newNames = sortByPriority([...tab.dictNames, name], priorityOrderRef.current)
+    } else {
+      newNames = tab.dictNames.filter((n) => n !== name)
+    }
+
+    setTabs((prev) => prev.map((t) => (t.id === activeId ? { ...t, dictNames: newNames } : t)))
+    await window.api.dict.setActiveDicts(newNames)
     closePopupRef.current()
     viewRef.current?.focus()
   }, [])
@@ -569,7 +729,7 @@ function App(): JSX.Element {
       if (fileData) {
         await openFileAsNewTab(filePath, fileData.content)
       } else {
-        const missingTab = makeMissingTab(filePath, null)
+        const missingTab = makeMissingTab(filePath, [])
         const view = viewRef.current
         const currentId = activeTabIdRef.current
         const currentState = view?.state
@@ -581,7 +741,7 @@ function App(): JSX.Element {
         })
         setActiveTabId(missingTab.id)
         view?.setState(missingTab.editorState)
-        await window.api.dict.setActiveDict(null)
+        await window.api.dict.setActiveDicts([])
         closePopupRef.current()
         view?.focus()
       }
@@ -599,7 +759,7 @@ function App(): JSX.Element {
         return {
           filePath: t.filePath,
           cursorPos: state.selection.main.head,
-          dictName: t.dictName
+          dictNames: t.dictNames
         }
       })
       const activeIdx = Math.max(0, tabsRef.current.findIndex((t) => t.id === currentId))
@@ -764,7 +924,7 @@ function App(): JSX.Element {
       editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
       dirty: false,
       missing: false,
-      dictName: null
+      dictNames: []
     }
 
     const view = new EditorView({ state: initialTab.editorState, parent: editorRef.current })
@@ -778,11 +938,16 @@ function App(): JSX.Element {
 
       const restoredTabs: Tab[] = []
       for (const st of session.tabs) {
+        // M7移行: 旧セッション dictName(単一) → dictNames(配列) に変換
+        const dictNames: string[] = Array.isArray(st.dictNames)
+          ? st.dictNames
+          : st.dictName ? [st.dictName] : []
+
         if (!st.filePath) {
           restoredTabs.push({
             id: newTabId(), filePath: null,
             editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
-            dirty: false, missing: false, dictName: st.dictName
+            dirty: false, missing: false, dictNames
           })
         } else {
           const fileData = await window.api.openFilePath(st.filePath)
@@ -794,7 +959,7 @@ function App(): JSX.Element {
                 extensions: sharedExtensions,
                 selection: { anchor: Math.min(st.cursorPos, fileData.content.length) }
               }),
-              dirty: false, missing: false, dictName: st.dictName
+              dirty: false, missing: false, dictNames
             })
           } else {
             restoredTabs.push({
@@ -803,7 +968,7 @@ function App(): JSX.Element {
                 doc: '',
                 extensions: [...sharedExtensions, EditorView.editable.of(false)]
               }),
-              dirty: false, missing: true, dictName: st.dictName
+              dirty: false, missing: true, dictNames
             })
           }
         }
@@ -817,7 +982,7 @@ function App(): JSX.Element {
       setTabs(restoredTabs)
       setActiveTabId(activeTab.id)
       view.setState(activeTab.editorState)
-      await window.api.dict.setActiveDict(activeTab.dictName)
+      await window.api.dict.setActiveDicts(activeTab.dictNames)
       view.focus()
     })
 
@@ -891,19 +1056,13 @@ function App(): JSX.Element {
           fontSize: '13px', flexShrink: 0
         }}>
           <span style={{ color: 'var(--kg-text-secondary)' }}>辞書:</span>
-          <select
-            value={activeDictName ?? ''}
-            onChange={(e) => handleDictChange(e.target.value)}
-            style={{ fontSize: '13px', padding: '2px 4px', background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)', border: '1px solid var(--kg-border-strong)', borderRadius: 3 }}
-          >
-            <option value="">（なし）</option>
-            {dictList.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-            <option disabled>──────</option>
-            <option value="__manage__">辞書を管理…</option>
-          </select>
-          <span style={{ color: 'var(--kg-text-muted)', fontSize: '12px' }}>Ctrl+D: 選択テキストを辞書に登録</span>
+          <DictSelector
+            dictList={dictList}
+            priorityOrder={priorityOrder}
+            activeDictNames={activeDictNames}
+            onToggle={handleDictToggle}
+            onOpenManager={() => window.api.dict.openManager()}
+          />
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
             <button
               onClick={() => openSearchRef.current(false)}
@@ -981,10 +1140,21 @@ function App(): JSX.Element {
       {/* 変換候補ポップアップ */}
       {popup && (
         <CandidatePopup
-          candidates={popup.candidates}
+          candidates={popup.candidates.map((c) => c.word)}
           selectedIndex={popup.selectedIndex}
           position={popup.position}
           onSelect={confirmCandidate}
+        />
+      )}
+
+      {/* 辞書登録モーダル（Ctrl+D / 右クリック） */}
+      {registerState && (
+        <RegisterModal
+          selectedText={registerState.selectedText}
+          activeDictNames={registerState.activeDictNames}
+          allDictNames={dictList}
+          onOk={handleRegisterOk}
+          onCancel={() => { setRegisterState(null); viewRef.current?.focus() }}
         />
       )}
 

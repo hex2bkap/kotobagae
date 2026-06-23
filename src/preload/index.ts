@@ -70,12 +70,12 @@ const api = {
 
   loadSession: () =>
     ipcRenderer.invoke('session:load') as Promise<{
-      tabs: Array<{ filePath: string | null; cursorPos: number; dictName: string | null }>
+      tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[]; dictName?: string | null }>
       activeTabIndex: number
     } | null>,
 
   saveSession: (data: {
-    tabs: Array<{ filePath: string | null; cursorPos: number; dictName: string | null }>
+    tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[] }>
     activeTabIndex: number
   }) => ipcRenderer.invoke('session:save', data) as Promise<void>,
 
@@ -104,15 +104,17 @@ const api = {
   // 辞書 API
   dict: {
     listDicts: () => ipcRenderer.invoke('dict:listDicts') as Promise<string[]>,
-    getActiveDict: () => ipcRenderer.invoke('dict:getActiveDict') as Promise<string | null>,
-    setActiveDict: (name: string | null) => ipcRenderer.invoke('dict:setActiveDict', name),
+    getActiveDicts: () => ipcRenderer.invoke('dict:getActiveDicts') as Promise<string[]>,
+    setActiveDicts: (names: string[]) => ipcRenderer.invoke('dict:setActiveDicts', names),
     getCandidates: (textBeforeCursor: string) =>
       ipcRenderer.invoke('dict:getCandidates', textBeforeCursor) as Promise<{
         reading: string
-        candidates: string[]
+        candidates: Array<{ word: string; dictName: string }>
       } | null>,
-    addEntry: (reading: string, candidates: string[]) =>
-      ipcRenderer.invoke('dict:addEntry', reading, candidates) as Promise<boolean>,
+    addEntry: (dictName: string, reading: string, candidates: string[]) =>
+      ipcRenderer.invoke('dict:addEntry', dictName, reading, candidates) as Promise<boolean>,
+    getPriorityOrder: () => ipcRenderer.invoke('dict:getPriorityOrder') as Promise<string[]>,
+    setPriorityOrder: (order: string[]) => ipcRenderer.invoke('dict:setPriorityOrder', order),
     createDict: (name: string) =>
       ipcRenderer.invoke('dict:createDict', name) as Promise<boolean>,
     // 辞書管理ウィンドウ

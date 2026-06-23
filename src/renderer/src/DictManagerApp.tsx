@@ -162,6 +162,18 @@ const LIST_ITEM_BASE: React.CSSProperties = {
   gap: 4
 }
 
+// ── ユーティリティ ────────────────────────────────────────────────────────────
+
+function sortByPriorityLocal(names: string[], order: string[]): string[] {
+  return names.slice().sort((a, b) => {
+    const ia = order.indexOf(a)
+    const ib = order.indexOf(b)
+    const ra = ia === -1 ? Infinity : ia
+    const rb = ib === -1 ? Infinity : ib
+    return ra - rb
+  })
+}
+
 // ── DictManagerApp ────────────────────────────────────────────────────────────
 
 export function DictManagerApp(): JSX.Element {
@@ -169,6 +181,7 @@ export function DictManagerApp(): JSX.Element {
 
   // Pane 1
   const [dicts, setDicts] = useState<string[]>([])
+  const [priorityOrder, setPriorityOrder] = useState<string[]>([])
   const [selectedDict, setSelectedDict] = useState<string | null>(null)
   const [renamingDict, setRenamingDict] = useState<string | null>(null)
   const [showNewDict, setShowNewDict] = useState(false)
@@ -236,17 +249,47 @@ export function DictManagerApp(): JSX.Element {
     window.api.dict.notifyListUpdated()
   }, [])
 
+  const movePriority = useCallback(async (dictName: string, direction: -1 | 1) => {
+    setPriorityOrder((prev) => {
+      // 優先度に未登録の辞書は末尾に追加してから移動
+      const allDicts = dicts
+      const base = allDicts.reduce((acc, n) => {
+        if (!acc.includes(n)) acc.push(n)
+        return acc
+      }, [...prev])
+      const idx = base.indexOf(dictName)
+      if (idx === -1) return prev
+      const newIdx = idx + direction
+      if (newIdx < 0 || newIdx >= base.length) return prev
+      const next = [...base]
+      ;[next[idx], next[newIdx]] = [next[newIdx], next[idx]]
+      // 保存
+      window.api.dict.setPriorityOrder(next)
+      // メインウィンドウにも通知（優先度変更は listUpdated を使う）
+      window.api.dict.notifyListUpdated()
+      // dicts 表示を優先度順に更新
+      setDicts(sortByPriorityLocal(dicts, next))
+      return next
+    })
+  }, [dicts])
+
   // ── 初期ロード ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     Promise.all([
-      window.api.dict.listDicts(),
-      window.api.dict.getActiveDict(),
+      window.api.dict.listDicts() as Promise<string[]>,
+      window.api.dict.getActiveDicts() as Promise<string[]>,
+      window.api.dict.getPriorityOrder() as Promise<string[]>,
       window.api.settings.load()
-    ]).then(async ([list, active, s]) => {
+    ]).then(async ([list, activeDicts, order, s]) => {
       setShowCount(s.dictSort?.showCount ?? false)
-      setDicts(list)
-      const initial = active && list.includes(active) ? active : list[0] ?? null
+      setPriorityOrder(order)
+      // 優先度順にソートして表示
+      const sorted = sortByPriorityLocal(list, order)
+      setDicts(sorted)
+      const initial = activeDicts[0] && list.includes(activeDicts[0])
+        ? activeDicts[0]
+        : list[0] ?? null
       if (initial) {
         setSelectedDict(initial)
         await reloadDictData(initial)
@@ -512,6 +555,22 @@ export function DictManagerApp(): JSX.Element {
             <button style={PANE_BTN} title="複製" disabled={!selectedDict} onClick={handleCopyDict}>複製</button>
             <button style={PANE_BTN} title="名前変更" disabled={!selectedDict} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
             <button style={PANE_BTN_DANGER} title="削除" disabled={!selectedDict} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
+          </div>
+          {/* 優先度並べ替え（グローバル設定） */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: '#e8e8e8', borderBottom: '1px solid #ddd', flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: '#666', marginRight: 'auto' }}>優先度（↑が高い）</span>
+            <button
+              style={{ ...PANE_BTN, padding: '1px 6px' }}
+              title="優先度を上げる"
+              disabled={!selectedDict || dicts.indexOf(selectedDict) <= 0}
+              onClick={() => selectedDict && movePriority(selectedDict, -1)}
+            >↑</button>
+            <button
+              style={{ ...PANE_BTN, padding: '1px 6px' }}
+              title="優先度を下げる"
+              disabled={!selectedDict || dicts.indexOf(selectedDict) >= dicts.length - 1}
+              onClick={() => selectedDict && movePriority(selectedDict, 1)}
+            >↓</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {dicts.map((name) => {

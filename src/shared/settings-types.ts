@@ -15,6 +15,10 @@ export interface AppSettings {
     showWritingStats: boolean
     wordGoal: number  // 0 = 無効
   }
+  // M7: グローバル辞書優先度（管理画面で設定。先頭が最優先）
+  dictPriorityOrder: string[]
+  // M7追跡: 新規タブで既定有効にする辞書名リスト
+  defaultDictNames: string[]
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -22,7 +26,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dictWindowBounds: null,
   autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 },
   dictSort: { byFrequency: true, showCount: false },
-  display: { theme: 'light', showWritingStats: false, wordGoal: 0 }
+  display: { theme: 'light', showWritingStats: false, wordGoal: 0 },
+  dictPriorityOrder: [],
+  defaultDictNames: []
 }
 
 export interface AutosaveFileInfo {

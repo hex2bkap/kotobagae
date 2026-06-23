@@ -22,3 +22,13 @@ export interface SearchResult {
   reading: string
   candidates: string[]
 }
+
+export interface CandidateWithSource {
+  word: string
+  dictName: string
+}
+
+export interface MultiSearchResult {
+  reading: string
+  candidates: CandidateWithSource[]
+}

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs'
 import { join } from 'path'
-import { searchCandidates, mergeEntries, sortCandidates } from '../../shared/dict/engine'
+import { searchCandidates, mergeEntries, sortCandidates, searchMultiDicts } from '../../shared/dict/engine'
 import { DictManager } from '../../shared/dict/DictManager'
 import type { Dict } from '../../shared/dict/types'
 
@@ -231,6 +231,86 @@ describe('DictManager 旧形式の自動移行', () => {
 })
 
 // ── sortCandidates テスト ──────────────────────────────────────────
+
+// ── searchMultiDicts テスト ─────────────────────────────────────────────────
+
+describe('searchMultiDicts', () => {
+  const dictA: import('../../shared/dict/types').Dict = {
+    'てすと': [
+      { word: 'テスト', memo: '', count: 3 },
+      { word: '試験', memo: '', count: 1 }
+    ]
+  }
+  const dictB: import('../../shared/dict/types').Dict = {
+    'てすと': [
+      { word: '検定', memo: '', count: 5 },
+      { word: 'テスト', memo: '', count: 0 }  // dictA と重複
+    ],
+    'ろ': [{ word: '路', memo: '', count: 0 }]
+  }
+
+  it('単一辞書でマッチする', () => {
+    const result = searchMultiDicts('てすと', [{ name: 'A', dict: dictA }])
+    expect(result?.reading).toBe('てすと')
+    expect(result?.candidates.map((c) => c.word)).toContain('テスト')
+  })
+
+  it('複数辞書をマージし優先度順に返す', () => {
+    const result = searchMultiDicts('てすと', [
+      { name: 'A', dict: dictA },
+      { name: 'B', dict: dictB }
+    ], 10, false)
+    expect(result?.reading).toBe('てすと')
+    // A が優先なので A の候補が先
+    expect(result?.candidates[0].word).toBe('テスト')
+    expect(result?.candidates[0].dictName).toBe('A')
+    expect(result?.candidates[1].word).toBe('試験')
+    expect(result?.candidates[1].dictName).toBe('A')
+    // 検定は B 由来（重複なし）
+    expect(result?.candidates[2].word).toBe('検定')
+    expect(result?.candidates[2].dictName).toBe('B')
+  })
+
+  it('同語は優先度の高い辞書のものだけ残す（dictB が優先の場合）', () => {
+    const result = searchMultiDicts('てすと', [
+      { name: 'B', dict: dictB },
+      { name: 'A', dict: dictA }
+    ], 10, false)
+    const words = result!.candidates.map((c) => c.word)
+    const testEntries = result!.candidates.filter((c) => c.word === 'テスト')
+    expect(testEntries).toHaveLength(1)
+    expect(testEntries[0].dictName).toBe('B')
+    // 登録順: B の検定(0), テスト(1), A の試験(後)
+    expect(words[0]).toBe('検定')
+  })
+
+  it('byFrequency=true: 辞書優先度内でcount降順に並ぶ', () => {
+    const result = searchMultiDicts('てすと', [
+      { name: 'A', dict: dictA },
+      { name: 'B', dict: dictB }
+    ], 10, true)
+    // A が優先なので A の候補が先。A 内では count 降順: テスト(3) → 試験(1)
+    expect(result?.candidates[0].word).toBe('テスト')
+    expect(result?.candidates[0].dictName).toBe('A')
+    expect(result?.candidates[1].word).toBe('試験')
+    // B の検定(count=5)は A 全体の後
+    expect(result?.candidates[2].word).toBe('検定')
+    expect(result?.candidates[2].dictName).toBe('B')
+  })
+
+  it('辞書リストが空なら null を返す', () => {
+    expect(searchMultiDicts('てすと', [])).toBeNull()
+  })
+
+  it('マッチしない場合は null を返す', () => {
+    expect(searchMultiDicts('xyz', [{ name: 'A', dict: dictA }])).toBeNull()
+  })
+
+  it('由来辞書名が結果に含まれる', () => {
+    const result = searchMultiDicts('ろ', [{ name: 'B', dict: dictB }])
+    expect(result?.candidates[0].dictName).toBe('B')
+  })
+})
 
 describe('sortCandidates', () => {
   const entries = [
