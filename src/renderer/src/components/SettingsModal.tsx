@@ -229,7 +229,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
             </Row>
 
             <div style={{ borderTop: '1px solid var(--kg-border)', marginTop: 10, paddingTop: 10 }}>
-              <p style={sectionHeadStyle}>新規タブの既定辞書</p>
+              <p style={sectionHeadStyle}>新規タブで開く辞書</p>
               {orderedDicts.length === 0 ? (
                 <p style={{ fontSize: 12, color: 'var(--kg-text-muted)' }}>辞書がありません</p>
               ) : (
@@ -247,7 +247,10 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
                 </div>
               )}
               <p style={{ fontSize: 11, color: 'var(--kg-text-muted)', margin: '6px 0 0' }}>
-                チェックした辞書が新規タブで自動的に有効になります
+                チェックした辞書が新規タブで自動的に有効になります。
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--kg-text-muted)', margin: '3px 0 0' }}>
+                複数選んだ場合は、辞書管理の優先度順（上が高い）で表示されます。
               </p>
             </div>
           </div>

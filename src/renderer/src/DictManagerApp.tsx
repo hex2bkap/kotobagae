@@ -186,6 +186,7 @@ export function DictManagerApp(): JSX.Element {
   const [renamingDict, setRenamingDict] = useState<string | null>(null)
   const [showNewDict, setShowNewDict] = useState(false)
   const [newDictValue, setNewDictValue] = useState('')
+  const [defaultDictNames, setDefaultDictNames] = useState<string[]>([])
 
   // Pane 2
   const [dictData, setDictData] = useState<DictData>({})
@@ -235,6 +236,15 @@ export function DictManagerApp(): JSX.Element {
     setTimeout(() => setSaveStatus('saved'), 700)
   }, [])
 
+  const toggleDefaultDict = useCallback(async (name: string, checked: boolean) => {
+    const next = checked
+      ? [...defaultDictNames, name]
+      : defaultDictNames.filter((n) => n !== name)
+    setDefaultDictNames(next)
+    const current = await window.api.settings.load()
+    await window.api.settings.save({ ...current, defaultDictNames: next })
+  }, [defaultDictNames])
+
   const reloadDictData = useCallback(async (name: string, keepReading?: string | null) => {
     const data = await window.api.dict.getDictData(name)
     setDictData(data as DictData)
@@ -283,6 +293,7 @@ export function DictManagerApp(): JSX.Element {
       window.api.settings.load()
     ]).then(async ([list, activeDicts, order, s]) => {
       setShowCount(s.dictSort?.showCount ?? false)
+      setDefaultDictNames(s.defaultDictNames ?? [])
       setPriorityOrder(order)
       // 優先度順にソートして表示
       const sorted = sortByPriorityLocal(list, order)
@@ -630,6 +641,22 @@ export function DictManagerApp(): JSX.Element {
               <div style={{ padding: '0 8px 4px', fontSize: 11, color: '#999' }}>Enter:追加 / Esc:終了</div>
             )}
           </div>
+          {/* 新規タブで開く辞書 */}
+          {dicts.length > 0 && (
+            <div style={{ borderTop: '1px solid #ddd', padding: '6px 8px', flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: '#666', marginBottom: 4, fontWeight: 600 }}>新規タブで開く辞書</div>
+              {dicts.map((name) => (
+                <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 0', fontSize: 12, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={defaultDictNames.includes(name)}
+                    onChange={(e) => toggleDefaultDict(name, e.target.checked)}
+                  />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Pane 2：読み ── */}
@@ -654,7 +681,7 @@ export function DictManagerApp(): JSX.Element {
           {/* インライン追加行 */}
           {showAddReading && (
             <div style={{ padding: '4px 8px', borderBottom: '1px solid #eee', background: '#f0f5ff', flexShrink: 0 }}>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 2 }}>
                 <input
                   ref={addReadingRef}
                   value={addReadingVal}
@@ -664,7 +691,7 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); addCandRef.current?.focus() }
                     if (e.key === 'Escape') { setShowAddReading(false); setAddReadingVal(''); setAddCandVal('') }
                   }}
-                  style={{ flex: 1, fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3 }}
+                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3, boxSizing: 'border-box' }}
                 />
                 <input
                   ref={addCandRef}
@@ -675,7 +702,7 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); handleAddReading() }
                     if (e.key === 'Escape') { setShowAddReading(false); setAddReadingVal(''); setAddCandVal('') }
                   }}
-                  style={{ flex: 2, fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3 }}
+                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3, boxSizing: 'border-box' }}
                 />
               </div>
               <div style={{ fontSize: 11, color: '#888' }}>Enter:追加 / Esc:終了</div>

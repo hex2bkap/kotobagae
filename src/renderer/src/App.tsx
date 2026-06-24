@@ -12,6 +12,7 @@ import { SearchPanel } from './components/SearchPanel'
 import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { RegisterModal } from './components/RegisterModal'
 import { MultiUnsavedModal, type UnsavedTabInfo, type MultiUnsavedResult } from './components/MultiUnsavedModal'
+import { ShortcutModal } from './components/ShortcutModal'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../../shared/settings-types'
@@ -230,6 +231,13 @@ function App(): JSX.Element {
   // 集中モード（F11）
   const [focusMode, setFocusMode] = useState(false)
 
+  // 保存ボタンのフラッシュ
+  const [saveFlash, setSaveFlash] = useState(false)
+  const saveFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ショートカット一覧モーダル
+  const [showShortcuts, setShowShortcuts] = useState(false)
+
   // ステータスバーの一時メッセージ
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const statusMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -269,15 +277,15 @@ function App(): JSX.Element {
     if (!settings) return
     const theme = settings.display?.theme ?? 'washi'
     document.documentElement.dataset.theme = theme
-    // テーマ別文字色の上書き（空 = テーマ既定のまま）
+    // エディタ本文色の上書き（空 = テーマ既定のまま。--kg-editor-text はエディタ内のみに作用）
     const isLightTheme = theme === 'light' || theme === 'washi'
     const customColor = isLightTheme
       ? (settings.display?.textColorLight ?? '')
       : (settings.display?.textColorDark ?? '')
     if (customColor) {
-      document.documentElement.style.setProperty('--kg-text-primary', customColor)
+      document.documentElement.style.setProperty('--kg-editor-text', customColor)
     } else {
-      document.documentElement.style.removeProperty('--kg-text-primary')
+      document.documentElement.style.removeProperty('--kg-editor-text')
     }
   }, [settings])
 
@@ -818,6 +826,9 @@ function App(): JSX.Element {
       if (!result.success) return
       setTabs((prev) => prev.map((t) => (t.id === activeId ? { ...t, dirty: false } : t)))
       showFlash('保存しました')
+      if (saveFlashTimerRef.current) clearTimeout(saveFlashTimerRef.current)
+      setSaveFlash(true)
+      saveFlashTimerRef.current = setTimeout(() => setSaveFlash(false), 1500)
     }
   }, [showFlash])
 
@@ -890,7 +901,8 @@ function App(): JSX.Element {
     const off4 = window.api.onMenuSaveAs(handleSaveAs)
     const off5 = window.api.onMenuSettings(() => setShowSettings(true))
     const off6 = window.api.onMenuAutosaveRestore(() => setShowAutosaveRestore(true))
-    return () => { off1(); off2(); off3(); off4(); off5(); off6() }
+    const off7 = window.api.onMenuShortcuts(() => setShowShortcuts(true))
+    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7() }
   }, [handleNew, handleOpen, handleSave, handleSaveAs])
 
   // ── 2重起動でファイルを受け取る ───────────────────────────────────────
@@ -1275,7 +1287,7 @@ function App(): JSX.Element {
           {/* 左グループ: ファイル操作 */}
           <button onClick={handleNew} title="新規 (Ctrl+N)" style={tbBtnStyle}>新規</button>
           <button onClick={handleOpen} title="開く (Ctrl+O)" style={tbBtnStyle}>開く</button>
-          <button onClick={handleSave} title="保存 (Ctrl+S)" style={tbBtnStyle}>保存</button>
+          <button onClick={handleSave} title="保存 (Ctrl+S)" style={saveFlash ? { ...tbBtnStyle, color: 'var(--kg-accent)' } : tbBtnStyle}>{saveFlash ? '保存✓' : '保存'}</button>
 
           {/* セパレータ */}
           <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
@@ -1437,6 +1449,9 @@ function App(): JSX.Element {
           onResult={multiUnsaved.onResult}
         />
       )}
+
+      {/* ショートカット一覧 */}
+      {showShortcuts && <ShortcutModal onClose={() => setShowShortcuts(false)} />}
     </div>
   )
 }

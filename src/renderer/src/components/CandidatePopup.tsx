@@ -9,14 +9,27 @@ interface Props {
 
 export function CandidatePopup({ candidates, selectedIndex, position, onSelect }: Props): JSX.Element {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // 選択行を常に表示範囲内に収める
   useEffect(() => {
     itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' })
   }, [selectedIndex])
 
+  // 画面右端をはみ出す場合に left を補正
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const overflow = rect.right - window.innerWidth
+    if (overflow > 0) {
+      el.style.left = `${position.left - overflow - 4}px`
+    }
+  }, [position, candidates])
+
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'fixed',
         top: position.top,

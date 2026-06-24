@@ -57,6 +57,11 @@ const api = {
     return () => ipcRenderer.removeListener('menu:autosaveRestore', cb)
   },
 
+  onMenuShortcuts: (cb: () => void) => {
+    ipcRenderer.on('menu:showShortcuts', cb)
+    return () => ipcRenderer.removeListener('menu:showShortcuts', cb)
+  },
+
   onMenuDisplay: (cb: (action: string, value?: unknown) => void) => {
     const handler = (_e: Electron.IpcRendererEvent, payload: { action: string; value?: unknown }) =>
       cb(payload.action, payload.value)

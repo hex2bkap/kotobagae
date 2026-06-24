@@ -21,6 +21,7 @@
   --kg-accent:        #C03020;
   --kg-accent-soft:   rgba(192,48,32,0.12);
   --kg-selection:     rgba(192,48,32,0.18);
+  --kg-editor-text:   #1A1A1A;
 }
 
 /* ダーク：温かみのある暗色 */
@@ -43,6 +44,7 @@
   --kg-accent:        #C84830;
   --kg-accent-soft:   rgba(200,72,48,0.18);
   --kg-selection:     rgba(200,72,48,0.25);
+  --kg-editor-text:   #DDD6C8;
 }
 
 /* 和紙：生成り温暖ライト（既定）*/
@@ -67,6 +69,7 @@
   --kg-selection:     rgba(192,57,27,0.18);
   /* 和紙テーマはタイトルバーだけ暗色（墨色）*/
   --kg-titlebar-text: #EBE6DA;
+  --kg-editor-text:   #1C1815;
 }
 
 /* 墨夜：極暗・温暖 */
@@ -89,6 +92,7 @@
   --kg-accent:        #C04028;
   --kg-accent-soft:   rgba(192,64,40,0.18);
   --kg-selection:     rgba(192,64,40,0.25);
+  --kg-editor-text:   #D8D0C0;
 }
 
 /* ── ベースリセット ─────────────────────────────────────────────────────── */
@@ -98,6 +102,11 @@ body {
   background: var(--kg-bg-primary);
   color: var(--kg-text-primary);
   font-family: "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
+}
+
+/* ── エディタ本文色（テーマ別・ユーザー上書き可）──────────────────────── */
+.cm-content {
+  color: var(--kg-editor-text);
 }
 
 /* ── 検索ハイライト ─────────────────────────────────────────────────────── */

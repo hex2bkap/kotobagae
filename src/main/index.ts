@@ -186,6 +186,7 @@ function createOrFocusDictWindow(): void {
   }
   dictWindow.on('move', scheduleDict)
   dictWindow.on('resize', scheduleDict)
+  dictWindow.on('focus', () => buildDictMenu())
 
   dictWindow.on('closed', () => { dictWindow = null })
 
@@ -264,14 +265,10 @@ function buildMenu(): void {
       ]
     },
     {
-      label: '辞書',
+      label: 'ツール',
       submenu: [
-        { label: '辞書を管理…', click: () => createOrFocusDictWindow() }
-      ]
-    },
-    {
-      label: '設定',
-      submenu: [
+        { label: '辞書を管理…', click: () => createOrFocusDictWindow() },
+        { type: 'separator' },
         {
           label: '設定...',
           accelerator: 'CmdOrCtrl+,',
@@ -281,6 +278,35 @@ function buildMenu(): void {
           label: 'データフォルダを開く',
           click: () => shell.openPath(dataDir)
         }
+      ]
+    },
+    {
+      label: 'ヘルプ',
+      submenu: [
+        {
+          label: 'このアプリについて',
+          click: () => {
+            dialog.showMessageBox(mainWindow!, {
+              type: 'info',
+              title: 'コトバガエについて',
+              message: 'コトバガエ',
+              detail: '作品ごとに辞書を切り替えられる、日本語創作執筆向けテキストエディタ。\n\nバージョン: 1.0.0'
+            })
+          }
+        },
+        { label: 'ショートカット一覧', click: () => mainWindow?.webContents.send('menu:showShortcuts') }
+      ]
+    }
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+function buildDictMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: '辞書',
+      submenu: [
+        { label: '閉じる', click: () => dictWindow?.close() }
       ]
     }
   ]
@@ -325,6 +351,7 @@ function createWindow(): void {
   }
   mainWindow.on('move', scheduleSaveBounds)
   mainWindow.on('resize', scheduleSaveBounds)
+  mainWindow.on('focus', () => buildMenu())
 
   mainWindow.on('close', (e) => {
     e.preventDefault()
