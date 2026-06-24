@@ -287,6 +287,17 @@ export function DictManagerApp(): JSX.Element {
 
   // ── 初期ロード ────────────────────────────────────────────────────────────
 
+  // テーマ同期：初回 + フォーカス時に最新テーマを適用
+  useEffect(() => {
+    const applyTheme = async (): Promise<void> => {
+      const s = await window.api.settings.load()
+      document.documentElement.setAttribute('data-theme', s.display.theme)
+    }
+    applyTheme()
+    window.addEventListener('focus', applyTheme)
+    return () => window.removeEventListener('focus', applyTheme)
+  }, [])
+
   useEffect(() => {
     Promise.all([
       window.api.dict.listDicts() as Promise<string[]>,
@@ -571,7 +582,7 @@ export function DictManagerApp(): JSX.Element {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--kg-border)' }}>
 
         {/* ── Pane 1：辞書セット ── */}
-        <div style={{ width: '20%', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
+        <div style={{ width: 200, minWidth: 160, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
           <div style={PANE_HEADER}>
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>辞書セット</span>
             <button style={PANE_BTN} title="新規" onClick={() => { setShowNewDict(true); setRenamingDict(null) }}>新規</button>
@@ -662,7 +673,7 @@ export function DictManagerApp(): JSX.Element {
         </div>
 
         {/* ── Pane 2：読み ── */}
-        <div style={{ width: '30%', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)' }}>
+        <div style={{ width: 240, minWidth: 180, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)' }}>
           <div style={PANE_HEADER}>
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>読み</span>
             <button
@@ -753,7 +764,7 @@ export function DictManagerApp(): JSX.Element {
         </div>
 
         {/* ── Pane 3：候補 ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, minWidth: 240, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={PANE_HEADER}>
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>
               {selectedReading ? `「${selectedReading}」の候補` : '候補'}

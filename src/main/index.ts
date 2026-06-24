@@ -155,13 +155,17 @@ function createOrFocusDictWindow(): void {
   const savedBounds = currentSettings.dictWindowBounds
   const bounds = savedBounds ? clampBounds(savedBounds) : null
 
+  const isLightThemeDW = currentSettings.display.theme === 'light' || currentSettings.display.theme === 'washi'
   dictWindow = new BrowserWindow({
-    width: bounds?.width ?? 820,
+    width: bounds?.width ?? 900,
     height: bounds?.height ?? 580,
+    minWidth: 700,
+    minHeight: 480,
     x: bounds?.x,
     y: bounds?.y,
     title: '辞書を管理 — コトバガエ',
     show: false,
+    backgroundColor: isLightThemeDW ? '#F5F0E6' : '#1C1814',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
