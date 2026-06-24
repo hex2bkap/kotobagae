@@ -66,11 +66,11 @@ function MemoInput({
       style={{
         width: '100%',
         fontSize: 12,
-        border: '1px solid #e0e0e0',
+        border: '1px solid var(--kg-border)',
         borderRadius: 3,
         padding: '2px 6px',
-        color: '#666',
-        background: '#f9f9f9',
+        color: 'var(--kg-text-secondary)',
+        background: 'var(--kg-bg-secondary)',
         boxSizing: 'border-box'
       }}
     />
@@ -114,10 +114,12 @@ function InlineTextInput({
       onClick={(e) => e.stopPropagation()}
       style={{
         fontSize: 13,
-        border: '1px solid #4a90d9',
+        border: '1px solid var(--kg-accent)',
         borderRadius: 3,
         padding: '1px 6px',
         width: '100%',
+        background: 'var(--kg-bg-primary)',
+        color: 'var(--kg-text-primary)',
         boxSizing: 'border-box',
         ...style
       }}
@@ -132,24 +134,24 @@ const PANE_HEADER: React.CSSProperties = {
   alignItems: 'center',
   gap: 4,
   padding: '5px 8px',
-  background: '#f0f0f0',
-  borderBottom: '1px solid #ddd',
+  background: 'var(--kg-bg-secondary)',
+  borderBottom: '1px solid var(--kg-border)',
   flexShrink: 0
 }
 
 const PANE_BTN: React.CSSProperties = {
   fontSize: 12,
   padding: '2px 8px',
-  border: '1px solid #ccc',
+  border: '1px solid var(--kg-border)',
   borderRadius: 3,
-  background: '#fff',
+  background: 'var(--kg-bg-primary)',
   cursor: 'pointer',
-  color: '#333'
+  color: 'var(--kg-text-primary)'
 }
 
 const PANE_BTN_DANGER: React.CSSProperties = {
   ...PANE_BTN,
-  color: '#c00'
+  color: 'var(--kg-accent)'
 }
 
 const LIST_ITEM_BASE: React.CSSProperties = {
@@ -563,23 +565,23 @@ export function DictManagerApp(): JSX.Element {
   // ── 描画 ──────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif', fontSize: 13, color: '#222', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif', fontSize: 13, color: 'var(--kg-text-primary)', overflow: 'hidden', background: 'var(--kg-bg-primary)' }}>
 
       {/* ── 3ペイン エリア ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', borderBottom: '1px solid #ccc' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--kg-border)' }}>
 
         {/* ── Pane 1：辞書セット ── */}
-        <div style={{ width: '20%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #ccc', background: '#fafafa' }}>
+        <div style={{ width: '20%', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
           <div style={PANE_HEADER}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: '#555', marginRight: 'auto' }}>辞書セット</span>
+            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>辞書セット</span>
             <button style={PANE_BTN} title="新規" onClick={() => { setShowNewDict(true); setRenamingDict(null) }}>新規</button>
             <button style={PANE_BTN} title="複製" disabled={!selectedDict} onClick={handleCopyDict}>複製</button>
             <button style={PANE_BTN} title="名前変更" disabled={!selectedDict} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
             <button style={PANE_BTN_DANGER} title="削除" disabled={!selectedDict} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
           </div>
           {/* 優先度並べ替え（グローバル設定） */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: '#e8e8e8', borderBottom: '1px solid #ddd', flexShrink: 0 }}>
-            <span style={{ fontSize: 11, color: '#666', marginRight: 'auto' }}>優先度（↑が高い）</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: 'var(--kg-bg-tertiary)', borderBottom: '1px solid var(--kg-border)', flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>優先度（↑が高い）</span>
             <button
               style={{ ...PANE_BTN, padding: '1px 6px' }}
               title="優先度を上げる"
@@ -604,9 +606,9 @@ export function DictManagerApp(): JSX.Element {
                   onContextMenu={(e) => openCtxDict(e, name)}
                   style={{
                     ...LIST_ITEM_BASE,
-                    background: isSelected ? '#e3eefa' : 'transparent',
+                    background: isSelected ? 'var(--kg-accent-soft)' : 'transparent',
                     fontWeight: isSelected ? 600 : 400,
-                    borderLeft: isSelected ? '3px solid #4a90d9' : '3px solid transparent'
+                    borderLeft: isSelected ? '3px solid var(--kg-accent)' : '3px solid transparent'
                   }}
                 >
                   {renamingDict === name ? (
@@ -633,18 +635,18 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); handleCreateDict() }
                     if (e.key === 'Escape') { setShowNewDict(false); setNewDictValue('') }
                   }}
-                  style={{ flex: 1, fontSize: 13, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3 }}
+                  style={{ flex: 1, fontSize: 13, padding: '2px 6px', border: '1px solid var(--kg-accent)', borderRadius: 3, background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)' }}
                 />
               </div>
             )}
             {showNewDict && (
-              <div style={{ padding: '0 8px 4px', fontSize: 11, color: '#999' }}>Enter:追加 / Esc:終了</div>
+              <div style={{ padding: '0 8px 4px', fontSize: 11, color: 'var(--kg-text-muted)' }}>Enter:追加 / Esc:終了</div>
             )}
           </div>
           {/* 新規タブで開く辞書 */}
           {dicts.length > 0 && (
-            <div style={{ borderTop: '1px solid #ddd', padding: '6px 8px', flexShrink: 0 }}>
-              <div style={{ fontSize: 11, color: '#666', marginBottom: 4, fontWeight: 600 }}>新規タブで開く辞書</div>
+            <div style={{ borderTop: '1px solid var(--kg-border)', padding: '6px 8px', flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: 'var(--kg-text-secondary)', marginBottom: 4, fontWeight: 600 }}>新規タブで開く辞書</div>
               {dicts.map((name) => (
                 <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 0', fontSize: 12, cursor: 'pointer' }}>
                   <input
@@ -660,9 +662,9 @@ export function DictManagerApp(): JSX.Element {
         </div>
 
         {/* ── Pane 2：読み ── */}
-        <div style={{ width: '30%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #ccc' }}>
+        <div style={{ width: '30%', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)' }}>
           <div style={PANE_HEADER}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: '#555', marginRight: 'auto' }}>読み</span>
+            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>読み</span>
             <button
               style={PANE_BTN}
               disabled={!selectedDict}
@@ -670,17 +672,17 @@ export function DictManagerApp(): JSX.Element {
             >＋ 追加</button>
           </div>
           {/* 絞り込み */}
-          <div style={{ padding: '4px 8px', borderBottom: '1px solid #eee', flexShrink: 0 }}>
+          <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--kg-border)', flexShrink: 0 }}>
             <input
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               placeholder="絞り込み"
-              style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid #ddd', borderRadius: 3, boxSizing: 'border-box' }}
+              style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid var(--kg-border)', borderRadius: 3, boxSizing: 'border-box', background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)' }}
             />
           </div>
           {/* インライン追加行 */}
           {showAddReading && (
-            <div style={{ padding: '4px 8px', borderBottom: '1px solid #eee', background: '#f0f5ff', flexShrink: 0 }}>
+            <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--kg-border)', background: 'var(--kg-accent-soft)', flexShrink: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 2 }}>
                 <input
                   ref={addReadingRef}
@@ -691,7 +693,7 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); addCandRef.current?.focus() }
                     if (e.key === 'Escape') { setShowAddReading(false); setAddReadingVal(''); setAddCandVal('') }
                   }}
-                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3, boxSizing: 'border-box' }}
+                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid var(--kg-accent)', borderRadius: 3, boxSizing: 'border-box', background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)' }}
                 />
                 <input
                   ref={addCandRef}
@@ -702,10 +704,10 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); handleAddReading() }
                     if (e.key === 'Escape') { setShowAddReading(false); setAddReadingVal(''); setAddCandVal('') }
                   }}
-                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid #4a90d9', borderRadius: 3, boxSizing: 'border-box' }}
+                  style={{ width: '100%', fontSize: 12, padding: '2px 6px', border: '1px solid var(--kg-accent)', borderRadius: 3, boxSizing: 'border-box', background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)' }}
                 />
               </div>
-              <div style={{ fontSize: 11, color: '#888' }}>Enter:追加 / Esc:終了</div>
+              <div style={{ fontSize: 11, color: 'var(--kg-text-muted)' }}>Enter:追加 / Esc:終了</div>
             </div>
           )}
           {/* 読み一覧 */}
@@ -720,8 +722,8 @@ export function DictManagerApp(): JSX.Element {
                   onContextMenu={(e) => openCtxReading(e, reading)}
                   style={{
                     ...LIST_ITEM_BASE,
-                    background: isSelected ? '#e3eefa' : 'transparent',
-                    borderLeft: isSelected ? '3px solid #4a90d9' : '3px solid transparent',
+                    background: isSelected ? 'var(--kg-accent-soft)' : 'transparent',
+                    borderLeft: isSelected ? '3px solid var(--kg-accent)' : '3px solid transparent',
                     justifyContent: 'space-between'
                   }}
                 >
@@ -734,7 +736,7 @@ export function DictManagerApp(): JSX.Element {
                   ) : (
                     <>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reading}</span>
-                      <span style={{ fontSize: 11, color: '#aaa', flexShrink: 0, marginLeft: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--kg-text-muted)', flexShrink: 0, marginLeft: 4 }}>
                         {dictData[reading]?.length ?? 0}件
                       </span>
                     </>
@@ -743,7 +745,7 @@ export function DictManagerApp(): JSX.Element {
               )
             })}
             {selectedDict && filteredReadings.length === 0 && !filterText && (
-              <div style={{ padding: '16px 10px', color: '#aaa', fontSize: 12 }}>
+              <div style={{ padding: '16px 10px', color: 'var(--kg-text-muted)', fontSize: 12 }}>
                 読みがありません。<br />「＋ 追加」で登録できます。
               </div>
             )}
@@ -753,7 +755,7 @@ export function DictManagerApp(): JSX.Element {
         {/* ── Pane 3：候補 ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={PANE_HEADER}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: '#555', marginRight: 'auto' }}>
+            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>
               {selectedReading ? `「${selectedReading}」の候補` : '候補'}
             </span>
             <button
@@ -764,7 +766,7 @@ export function DictManagerApp(): JSX.Element {
           </div>
           {/* インライン追加行 */}
           {showAddCandidate && selectedReading && (
-            <div style={{ padding: '4px 8px', borderBottom: '1px solid #eee', background: '#f0f5ff', flexShrink: 0 }}>
+            <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--kg-border)', background: 'var(--kg-accent-soft)', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
                 <input
                   ref={addCandidateRef}
@@ -775,10 +777,10 @@ export function DictManagerApp(): JSX.Element {
                     if (e.key === 'Enter') { e.preventDefault(); handleAddCandidate() }
                     if (e.key === 'Escape') { setShowAddCandidate(false); setAddCandidateVal('') }
                   }}
-                  style={{ flex: 1, fontSize: 13, padding: '3px 8px', border: '1px solid #4a90d9', borderRadius: 3 }}
+                  style={{ flex: 1, fontSize: 13, padding: '3px 8px', border: '1px solid var(--kg-accent)', borderRadius: 3, background: 'var(--kg-bg-primary)', color: 'var(--kg-text-primary)' }}
                 />
               </div>
-              <div style={{ fontSize: 11, color: '#888' }}>Enter:追加 / Esc:終了</div>
+              <div style={{ fontSize: 11, color: 'var(--kg-text-muted)' }}>Enter:追加 / Esc:終了</div>
             </div>
           )}
           {/* 候補一覧 */}
@@ -788,10 +790,10 @@ export function DictManagerApp(): JSX.Element {
                 key={idx}
                 onContextMenu={(e) => openCtxCandidate(e, idx)}
                 style={{
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--kg-border)',
                   borderRadius: 5,
                   padding: '7px 10px',
-                  background: '#fff',
+                  background: 'var(--kg-bg-primary)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 4
@@ -821,8 +823,8 @@ export function DictManagerApp(): JSX.Element {
                   {showCount && (
                     <span style={{
                       fontSize: 11, padding: '1px 6px',
-                      background: entry.count > 0 ? '#e8f0fe' : '#f0f0f0',
-                      color: entry.count > 0 ? '#1a56c4' : '#aaa',
+                      background: entry.count > 0 ? 'var(--kg-accent-soft)' : 'var(--kg-bg-tertiary)',
+                      color: entry.count > 0 ? 'var(--kg-accent)' : 'var(--kg-text-muted)',
                       borderRadius: 10, flexShrink: 0
                     }}>
                       使用 {entry.count}回
@@ -831,9 +833,9 @@ export function DictManagerApp(): JSX.Element {
                   <button
                     onClick={() => handleDeleteCandidate(idx)}
                     title="削除"
-                    style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#e53e3e')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#ccc')}
+                    style={{ background: 'none', border: 'none', color: 'var(--kg-text-muted)', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--kg-accent)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--kg-text-muted)')}
                   >×</button>
                 </div>
                 {/* メモ行 */}
@@ -845,12 +847,12 @@ export function DictManagerApp(): JSX.Element {
               </div>
             ))}
             {selectedReading && candidates.length === 0 && (
-              <div style={{ color: '#aaa', fontSize: 12, paddingTop: 8 }}>
+              <div style={{ color: 'var(--kg-text-muted)', fontSize: 12, paddingTop: 8 }}>
                 候補がありません。「＋ 追加」で登録できます。
               </div>
             )}
             {!selectedReading && (
-              <div style={{ color: '#bbb', fontSize: 12, paddingTop: 8 }}>
+              <div style={{ color: 'var(--kg-text-muted)', fontSize: 12, paddingTop: 8 }}>
                 左の「読み」から項目を選ぶと候補が表示されます。
               </div>
             )}
@@ -861,7 +863,7 @@ export function DictManagerApp(): JSX.Element {
       {/* ── フッター ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        padding: '5px 12px', background: '#f5f5f5', borderTop: '1px solid #ddd',
+        padding: '5px 12px', background: 'var(--kg-bg-secondary)', borderTop: '1px solid var(--kg-border)',
         fontSize: 12, flexShrink: 0
       }}>
         <button
@@ -876,7 +878,7 @@ export function DictManagerApp(): JSX.Element {
           onClick={handleExportTsv}
           title="TSV エクスポート（選択辞書対象）"
         >TSV エクスポート</button>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: saveStatus === 'saving' ? '#888' : '#3a8a3a' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: saveStatus === 'saving' ? 'var(--kg-text-muted)' : 'var(--kg-text-secondary)' }}>
           {saveStatus === 'saving' ? (
             <span>保存中…</span>
           ) : (
@@ -893,7 +895,7 @@ export function DictManagerApp(): JSX.Element {
         <div
           style={{
             position: 'fixed', left: ctxMenu.x, top: ctxMenu.y,
-            background: '#fff', border: '1px solid #ccc', borderRadius: 4,
+            background: 'var(--kg-bg-primary)', border: '1px solid var(--kg-border)', borderRadius: 4,
             boxShadow: '0 2px 8px rgba(0,0,0,0.18)', zIndex: 1000, minWidth: 130
           }}
           onClick={(e) => e.stopPropagation()}
@@ -904,9 +906,9 @@ export function DictManagerApp(): JSX.Element {
               onClick={() => { item.action(); setCtxMenu(null) }}
               style={{
                 padding: '6px 14px', cursor: 'pointer', fontSize: 13,
-                color: item.danger ? '#c00' : '#222'
+                color: item.danger ? 'var(--kg-accent)' : 'var(--kg-text-primary)'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f0f0')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--kg-bg-secondary)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = '')}
             >
               {item.label}

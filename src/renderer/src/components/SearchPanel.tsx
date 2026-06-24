@@ -187,7 +187,7 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
           placeholder="検索"
           style={inputStyle}
         />
-        <span style={{ fontSize: 12, color: matchInfo.total === 0 && hasQuery ? '#c0392b' : 'var(--kg-text-muted)', minWidth: 52, textAlign: 'center' }}>
+        <span style={{ fontSize: 12, color: matchInfo.total === 0 && hasQuery ? 'var(--kg-missing-text)' : 'var(--kg-text-muted)', minWidth: 52, textAlign: 'center' }}>
           {countText}
         </span>
         <button onClick={handleFindPrev} title="前へ (Shift+Enter)" disabled={!hasQuery} style={iconBtnStyle}>↑</button>

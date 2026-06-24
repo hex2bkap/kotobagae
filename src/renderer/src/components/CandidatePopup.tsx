@@ -35,8 +35,8 @@ export function CandidatePopup({ candidates, selectedIndex, position, onSelect }
         top: position.top,
         left: position.left,
         zIndex: 9999,
-        background: '#fff',
-        border: '1px solid #bbb',
+        background: 'var(--kg-bg-primary)',
+        border: '1px solid var(--kg-border)',
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
         maxHeight: '320px',
@@ -58,8 +58,8 @@ export function CandidatePopup({ candidates, selectedIndex, position, onSelect }
           style={{
             padding: '4px 12px',
             cursor: 'pointer',
-            background: i === selectedIndex ? '#4a90d9' : 'transparent',
-            color: i === selectedIndex ? '#fff' : '#222',
+            background: i === selectedIndex ? 'var(--kg-accent)' : 'transparent',
+            color: i === selectedIndex ? 'var(--kg-bg-primary)' : 'var(--kg-text-primary)',
             whiteSpace: 'nowrap'
           }}
         >

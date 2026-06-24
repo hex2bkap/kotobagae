@@ -49,33 +49,33 @@ export function AutosaveRestoreModal({ onClose, onOpen }: Props): JSX.Element {
         </h2>
 
         {files === null ? (
-          <p style={{ color: '#555', fontSize: 13 }}>読み込み中...</p>
+          <p style={{ color: 'var(--kg-text-secondary)', fontSize: 13 }}>読み込み中...</p>
         ) : files.length === 0 ? (
-          <p style={{ color: '#777', fontSize: 13 }}>自動保存ファイルが見つかりません。</p>
+          <p style={{ color: 'var(--kg-text-muted)', fontSize: 13 }}>自動保存ファイルが見つかりません。</p>
         ) : (
-          <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #ddd', borderRadius: 4 }}>
+          <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--kg-border)', borderRadius: 4 }}>
             {files.map((f) => (
               <div
                 key={f.path}
                 onClick={() => setSelectedPath(f.path)}
                 style={{
                   padding: '10px 12px',
-                  borderBottom: '1px solid #eee',
+                  borderBottom: '1px solid var(--kg-border)',
                   cursor: 'pointer',
-                  background: selectedPath === f.path ? '#e3f0ff' : '#fff'
+                  background: selectedPath === f.path ? 'var(--kg-accent-soft)' : 'var(--kg-bg-primary)'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ fontWeight: 'bold', color: '#222' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--kg-text-primary)' }}>
                     {parseBaseName(f.name)}
                   </span>
-                  <span style={{ color: '#777', flexShrink: 0, marginLeft: 12 }}>
+                  <span style={{ color: 'var(--kg-text-muted)', flexShrink: 0, marginLeft: 12 }}>
                     {formatDate(f.mtime)}
                   </span>
                 </div>
                 {f.preview && (
                   <div style={{
-                    marginTop: 4, fontSize: 12, color: '#555',
+                    marginTop: 4, fontSize: 12, color: 'var(--kg-text-secondary)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                   }}>
                     {f.preview}
@@ -107,15 +107,17 @@ const overlayStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center'
 }
 const modalStyle: React.CSSProperties = {
-  background: '#fff', borderRadius: 8, padding: '24px 28px',
+  background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '24px 28px',
   width: 560, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-  display: 'flex', flexDirection: 'column'
+  display: 'flex', flexDirection: 'column',
+  color: 'var(--kg-text-primary)'
 }
 const cancelButtonStyle: React.CSSProperties = {
   padding: '6px 16px', fontSize: 13, cursor: 'pointer',
-  border: '1px solid #ccc', borderRadius: 4, background: '#fff'
+  border: '1px solid var(--kg-border)', borderRadius: 4,
+  background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)'
 }
 const okButtonStyle: React.CSSProperties = {
   padding: '6px 16px', fontSize: 13,
-  border: 'none', borderRadius: 4, background: '#1976d2', color: '#fff'
+  border: 'none', borderRadius: 4, background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)'
 }

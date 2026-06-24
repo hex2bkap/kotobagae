@@ -13,6 +13,7 @@ import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { RegisterModal } from './components/RegisterModal'
 import { MultiUnsavedModal, type UnsavedTabInfo, type MultiUnsavedResult } from './components/MultiUnsavedModal'
 import { ShortcutModal } from './components/ShortcutModal'
+import { TbIcon, ICONS } from './components/TbIcon'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../../shared/settings-types'
@@ -188,12 +189,6 @@ function buildFontTheme(s: AppSettings | null): Extension {
   })
 }
 
-const tbBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', cursor: 'pointer',
-  padding: '3px 8px', borderRadius: 3,
-  color: 'var(--kg-text-secondary)', fontSize: 13,
-  whiteSpace: 'nowrap'
-}
 
 function App(): JSX.Element {
   const editorRef = useRef<HTMLDivElement>(null)
@@ -1290,9 +1285,21 @@ function App(): JSX.Element {
           fontSize: '13px', flexShrink: 0
         }}>
           {/* 左グループ: ファイル操作 */}
-          <button onClick={handleNew} title="新規 (Ctrl+N)" style={tbBtnStyle}>新規</button>
-          <button onClick={handleOpen} title="開く (Ctrl+O)" style={tbBtnStyle}>開く</button>
-          <button onClick={handleSave} title="保存 (Ctrl+S)" style={saveFlash ? { ...tbBtnStyle, color: 'var(--kg-accent)' } : tbBtnStyle}>{saveFlash ? '保存✓' : '保存'}</button>
+          <button onClick={handleNew} title="新規 (Ctrl+N)" aria-label="新規" className="kg-tb-btn">
+            <TbIcon paths={ICONS.fileNew} aria-hidden />
+          </button>
+          <button onClick={handleOpen} title="開く (Ctrl+O)" aria-label="開く" className="kg-tb-btn">
+            <TbIcon paths={ICONS.folderOpen} aria-hidden />
+          </button>
+          <button
+            onClick={handleSave}
+            title="保存 (Ctrl+S)"
+            aria-label="保存"
+            className="kg-tb-btn"
+            style={saveFlash ? { color: 'var(--kg-accent)' } : undefined}
+          >
+            <TbIcon paths={saveFlash ? ICONS.check : ICONS.save} aria-hidden />
+          </button>
 
           {/* セパレータ */}
           <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
@@ -1313,18 +1320,21 @@ function App(): JSX.Element {
           <button
             onClick={() => openSearchRef.current(false)}
             title="検索 (Ctrl+F)"
-            style={tbBtnStyle}
-          >検索</button>
+            aria-label="検索"
+            className="kg-tb-btn"
+          ><TbIcon paths={ICONS.search} aria-hidden /></button>
           <button
             onClick={() => setFocusMode((v) => !v)}
             title="集中モード (F11)"
-            style={tbBtnStyle}
-          >集中</button>
+            aria-label="集中モード"
+            className="kg-tb-btn"
+          ><TbIcon paths={ICONS.maximize} aria-hidden /></button>
           <button
             onClick={() => setShowSettings(true)}
             title="設定 (Ctrl+,)"
-            style={tbBtnStyle}
-          >⚙</button>
+            aria-label="設定"
+            className="kg-tb-btn"
+          ><TbIcon paths={ICONS.settings} aria-hidden /></button>
         </div>
       )}
 

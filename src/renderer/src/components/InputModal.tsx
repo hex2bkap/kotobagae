@@ -37,9 +37,10 @@ export function InputModal({ message, defaultValue = '', onOk, onCancel }: Props
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div style={{
-        background: '#fff', borderRadius: '6px', padding: '24px 28px',
+        background: 'var(--kg-bg-primary)', borderRadius: '6px', padding: '24px 28px',
         minWidth: '320px', boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
-        fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif'
+        fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif',
+        color: 'var(--kg-text-primary)'
       }}>
         <p style={{ margin: '0 0 12px', fontSize: '14px' }}>{message}</p>
         <input
@@ -49,18 +50,19 @@ export function InputModal({ message, defaultValue = '', onOk, onCancel }: Props
           style={{
             width: '100%', boxSizing: 'border-box',
             fontSize: '14px', padding: '6px 8px',
-            border: '1px solid #bbb', borderRadius: '4px'
+            border: '1px solid var(--kg-border)', borderRadius: '4px',
+            background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)'
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-          <button onClick={onCancel} style={{ padding: '5px 16px', fontSize: '13px' }}>
+          <button onClick={onCancel} style={{ padding: '5px 16px', fontSize: '13px', cursor: 'pointer', borderRadius: '4px', border: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)' }}>
             キャンセル
           </button>
           <button
             onClick={handleOk}
             style={{
               padding: '5px 16px', fontSize: '13px',
-              background: '#4a90d9', color: '#fff', border: 'none', borderRadius: '4px'
+              background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer'
             }}
           >
             OK

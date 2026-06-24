@@ -112,7 +112,7 @@ export function RegisterModal({
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button style={btnStyle} onClick={onCancel}>キャンセル</button>
           <button
-            style={{ ...btnStyle, background: '#4a90d9', color: '#fff', borderColor: '#357abd' }}
+            style={{ ...btnStyle, background: 'var(--kg-accent)', color: '#fff', borderColor: 'var(--kg-accent)' }}
             onClick={handleOk}
             disabled={!effectiveDict || !reading.trim()}
           >登録</button>

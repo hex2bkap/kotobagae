@@ -298,7 +298,12 @@ function buildMenu(): void {
       ]
     }
   ]
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  const menu = Menu.buildFromTemplate(template)
+  if (process.platform === 'win32') {
+    mainWindow?.setMenu(menu)
+  } else {
+    Menu.setApplicationMenu(menu)
+  }
 }
 
 function buildDictMenu(): void {
@@ -310,7 +315,12 @@ function buildDictMenu(): void {
       ]
     }
   ]
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  const menu = Menu.buildFromTemplate(template)
+  if (process.platform === 'win32') {
+    dictWindow?.setMenu(menu)
+  } else {
+    Menu.setApplicationMenu(menu)
+  }
 }
 
 // ── ウィンドウ作成 ────────────────────────────────────────────────────────────
@@ -320,6 +330,7 @@ function createWindow(): void {
     ? clampBounds(currentSettings.windowBounds)
     : null
 
+  const isLightTheme = currentSettings.display.theme === 'light' || currentSettings.display.theme === 'washi'
   mainWindow = new BrowserWindow({
     width: bounds?.width ?? 900,
     height: bounds?.height ?? 670,
@@ -327,6 +338,7 @@ function createWindow(): void {
     y: bounds?.y,
     show: false,
     autoHideMenuBar: false,
+    backgroundColor: isLightTheme ? '#F5F0E6' : '#1C1814',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

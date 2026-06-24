@@ -109,6 +109,28 @@ body {
   color: var(--kg-editor-text);
 }
 
+/* ── ツールバーボタン ───────────────────────────────────────────────────── */
+.kg-tb-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: 4px;
+  color: var(--kg-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.kg-tb-btn:hover {
+  background: var(--kg-accent-soft);
+  color: var(--kg-text-primary);
+}
+.kg-tb-btn:active {
+  opacity: 0.7;
+}
+
 /* ── 検索ハイライト ─────────────────────────────────────────────────────── */
 .cm-searchMatch {
   background: rgba(200, 160, 0, 0.3);

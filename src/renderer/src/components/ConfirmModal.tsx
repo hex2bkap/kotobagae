@@ -11,8 +11,9 @@ export function ConfirmModal({ message, onOk, onCancel }: Props): JSX.Element {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200
     }}>
       <div style={{
-        background: '#fff', borderRadius: 8, padding: '24px 28px',
-        minWidth: 280, boxShadow: '0 4px 24px rgba(0,0,0,0.18)'
+        background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '24px 28px',
+        minWidth: 280, boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+        color: 'var(--kg-text-primary)'
       }}>
         <p style={{ margin: '0 0 20px', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
           {message}
@@ -20,7 +21,7 @@ export function ConfirmModal({ message, onOk, onCancel }: Props): JSX.Element {
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button
             onClick={onCancel}
-            style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', borderRadius: 4 }}
+            style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', borderRadius: 4, border: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)' }}
           >
             キャンセル
           </button>
@@ -28,7 +29,7 @@ export function ConfirmModal({ message, onOk, onCancel }: Props): JSX.Element {
             onClick={onOk}
             style={{
               padding: '6px 16px', fontSize: 13, cursor: 'pointer',
-              background: '#c62828', color: '#fff', border: 'none', borderRadius: 4
+              background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)', border: 'none', borderRadius: 4
             }}
           >
             閉じる
