@@ -146,7 +146,9 @@ const PANE_BTN: React.CSSProperties = {
   borderRadius: 3,
   background: 'var(--kg-bg-primary)',
   cursor: 'pointer',
-  color: 'var(--kg-text-primary)'
+  color: 'var(--kg-text-primary)',
+  flexShrink: 0,
+  whiteSpace: 'nowrap'
 }
 
 const PANE_BTN_DANGER: React.CSSProperties = {
@@ -583,12 +585,14 @@ export function DictManagerApp(): JSX.Element {
 
         {/* ── Pane 1：辞書セット ── */}
         <div style={{ width: 200, minWidth: 160, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
-          <div style={PANE_HEADER}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>辞書セット</span>
-            <button style={PANE_BTN} title="新規" onClick={() => { setShowNewDict(true); setRenamingDict(null) }}>新規</button>
-            <button style={PANE_BTN} title="複製" disabled={!selectedDict} onClick={handleCopyDict}>複製</button>
-            <button style={PANE_BTN} title="名前変更" disabled={!selectedDict} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
-            <button style={PANE_BTN_DANGER} title="削除" disabled={!selectedDict} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
+          <div style={{ ...PANE_HEADER, flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', whiteSpace: 'nowrap' }}>辞書セット</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button style={PANE_BTN} title="新規" onClick={() => { setShowNewDict(true); setRenamingDict(null) }}>新規</button>
+              <button style={PANE_BTN} title="複製" disabled={!selectedDict} onClick={handleCopyDict}>複製</button>
+              <button style={PANE_BTN} title="名前変更" disabled={!selectedDict} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
+              <button style={PANE_BTN_DANGER} title="削除" disabled={!selectedDict} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
+            </div>
           </div>
           {/* 優先度並べ替え（グローバル設定） */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', background: 'var(--kg-bg-tertiary)', borderBottom: '1px solid var(--kg-border)', flexShrink: 0 }}>
@@ -656,8 +660,9 @@ export function DictManagerApp(): JSX.Element {
           </div>
           {/* 新規タブで開く辞書 */}
           {dicts.length > 0 && (
-            <div style={{ borderTop: '1px solid var(--kg-border)', padding: '6px 8px', flexShrink: 0 }}>
-              <div style={{ fontSize: 11, color: 'var(--kg-text-secondary)', marginBottom: 4, fontWeight: 600 }}>新規タブで開く辞書</div>
+            <div style={{ borderTop: '1px solid var(--kg-border)', padding: '6px 8px 4px', flexShrink: 0, maxHeight: 160, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 11, color: 'var(--kg-text-secondary)', marginBottom: 4, fontWeight: 600, flexShrink: 0 }}>新規タブで開く辞書</div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
               {dicts.map((name) => (
                 <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 0', fontSize: 12, cursor: 'pointer' }}>
                   <input
@@ -668,6 +673,7 @@ export function DictManagerApp(): JSX.Element {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                 </label>
               ))}
+              </div>
             </div>
           )}
         </div>
@@ -766,7 +772,7 @@ export function DictManagerApp(): JSX.Element {
         {/* ── Pane 3：候補 ── */}
         <div style={{ flex: 1, minWidth: 240, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={PANE_HEADER}>
-            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>
+            <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
               {selectedReading ? `「${selectedReading}」の候補` : '候補'}
             </span>
             <button
