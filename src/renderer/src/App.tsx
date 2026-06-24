@@ -646,17 +646,20 @@ function App(): JSX.Element {
 
   // ── タブ操作 ─────────────────────────────────────────────────────────
 
-  const makeNewTab = useCallback((): Tab => ({
-    id: newTabId(),
-    filePath: null,
-    editorState: EditorState.create({ doc: '', extensions: extensionsRef.current! }),
-    dirty: false,
-    missing: false,
-    dictNames: sortByPriority(
-      (settings?.defaultDictNames ?? []).filter((n) => dictList.includes(n)),
-      priorityOrderRef.current
-    )
-  }), [settings, dictList])
+  const makeNewTab = useCallback((overrideDictNames?: string[]): Tab => {
+    const base = overrideDictNames ?? (settings?.defaultDictNames ?? [])
+    return {
+      id: newTabId(),
+      filePath: null,
+      editorState: EditorState.create({ doc: '', extensions: extensionsRef.current! }),
+      dirty: false,
+      missing: false,
+      dictNames: sortByPriority(
+        base.filter((n) => dictList.includes(n)),
+        priorityOrderRef.current
+      )
+    }
+  }, [settings, dictList])
 
   const makeMissingTab = useCallback((filePath: string, dictNames: string[]): Tab => ({
     id: newTabId(),
@@ -711,7 +714,8 @@ function App(): JSX.Element {
     const remaining = currentTabs.filter((t) => t.id !== id)
 
     if (remaining.length === 0) {
-      const newTab = makeNewTab()
+      const freshSettings = await window.api.settings.load()
+      const newTab = makeNewTab(freshSettings.defaultDictNames ?? [])
       setTabs([newTab])
       setActiveTabId(newTab.id)
       const v0 = viewRef.current
@@ -776,7 +780,8 @@ function App(): JSX.Element {
   }, [applyDisplayToView])
 
   const handleNew = useCallback(async () => {
-    const newTab = makeNewTab()
+    const freshSettings = await window.api.settings.load()
+    const newTab = makeNewTab(freshSettings.defaultDictNames ?? [])
     const view = viewRef.current
     const currentId = activeTabIdRef.current
     const currentState = view?.state
