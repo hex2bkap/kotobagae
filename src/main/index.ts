@@ -67,7 +67,8 @@ function loadSettings(): AppSettings {
       },
       dictSort: {
         byFrequency: p.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
-        showCount: p.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount
+        showCount: p.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount,
+        maxCandidates: p.dictSort?.maxCandidates ?? DEFAULT_SETTINGS.dictSort.maxCandidates
       },
       display: {
         theme: p.display?.theme ?? DEFAULT_SETTINGS.display.theme,
@@ -497,7 +498,8 @@ ipcMain.handle('dict:getCandidates', (_event, textBeforeCursor: string) => {
   })
   const dicts = ordered.map((name) => ({ name, dict: dictManager!.getDict(name) }))
   const byFrequency = currentSettings.dictSort?.byFrequency ?? true
-  return searchMultiDicts(textBeforeCursor, dicts, 10, byFrequency)
+  const maxCandidates = currentSettings.dictSort?.maxCandidates ?? 10
+  return searchMultiDicts(textBeforeCursor, dicts, maxCandidates, byFrequency)
 })
 ipcMain.handle('dict:addEntry', (_event, dictName: string, reading: string, candidates: string[]) => {
   if (!dictManager || !dictName) return false

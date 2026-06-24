@@ -387,13 +387,34 @@ function App(): JSX.Element {
     })
   }, [])
 
-  // ── F11 集中モード ────────────────────────────────────────────────────
+  // ── F11 集中モード / Ctrl++/- フォントサイズ ────────────────────────
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === 'F11') {
         e.preventDefault()
         setFocusMode((v) => !v)
+        return
+      }
+      // Ctrl++（= または +）/ Ctrl+-（- またはテンキー-）でフォントサイズ変更
+      if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          setSettings((prev) => {
+            if (!prev) return prev
+            const next = { ...prev, display: { ...prev.display, fontSize: Math.min(prev.display.fontSize + 2, 40) } }
+            window.api.settings.save(next)
+            return next
+          })
+        } else if (e.key === '-') {
+          e.preventDefault()
+          setSettings((prev) => {
+            if (!prev) return prev
+            const next = { ...prev, display: { ...prev.display, fontSize: Math.max(prev.display.fontSize - 2, 10) } }
+            window.api.settings.save(next)
+            return next
+          })
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -1312,6 +1333,8 @@ function App(): JSX.Element {
       {/* 設定モーダル */}
       {showSettings && (
         <SettingsModal
+          dictList={dictList}
+          priorityOrder={priorityOrder}
           onClose={() => setShowSettings(false)}
           onSave={(newSettings) => setSettings(newSettings)}
         />
