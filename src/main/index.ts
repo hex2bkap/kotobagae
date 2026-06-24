@@ -99,7 +99,9 @@ function saveSettings(s: AppSettings): void {
 // ── ウィンドウ位置クランプ（別解像度・別PCで画面外に出ない）─────────────
 
 function clampBounds(
-  b: NonNullable<AppSettings['windowBounds']>
+  b: NonNullable<AppSettings['windowBounds']>,
+  minW = 600,
+  minH = 400
 ): NonNullable<AppSettings['windowBounds']> {
   const displays = screen.getAllDisplays()
   let minX = Infinity, minY = Infinity, maxRight = -Infinity, maxBottom = -Infinity
@@ -110,8 +112,8 @@ function clampBounds(
     maxRight = Math.max(maxRight, wa.x + wa.width)
     maxBottom = Math.max(maxBottom, wa.y + wa.height)
   }
-  const w = Math.max(600, Math.min(b.width, maxRight - minX))
-  const h = Math.max(400, Math.min(b.height, maxBottom - minY))
+  const w = Math.max(minW, Math.min(b.width, maxRight - minX))
+  const h = Math.max(minH, Math.min(b.height, maxBottom - minY))
   const x = Math.max(minX, Math.min(b.x, maxRight - w))
   const y = Math.max(minY, Math.min(b.y, maxBottom - h))
   return { x, y, width: w, height: h }
@@ -153,13 +155,13 @@ function createOrFocusDictWindow(): void {
   }
 
   const savedBounds = currentSettings.dictWindowBounds
-  const bounds = savedBounds ? clampBounds(savedBounds) : null
+  const bounds = savedBounds ? clampBounds(savedBounds, 720, 480) : null
 
   const isLightThemeDW = currentSettings.display.theme === 'light' || currentSettings.display.theme === 'washi'
   dictWindow = new BrowserWindow({
     width: bounds?.width ?? 900,
     height: bounds?.height ?? 580,
-    minWidth: 700,
+    minWidth: 720,
     minHeight: 480,
     x: bounds?.x,
     y: bounds?.y,
