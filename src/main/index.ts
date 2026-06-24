@@ -169,7 +169,10 @@ function createOrFocusDictWindow(): void {
     }
   })
 
-  dictWindow.on('ready-to-show', () => { dictWindow?.show() })
+  dictWindow.on('ready-to-show', () => {
+    dictWindow?.show()
+    if (is.dev) dictWindow?.webContents.openDevTools()
+  })
 
   let dictBoundsTimer: NodeJS.Timeout | null = null
   const scheduleDict = (): void => {
@@ -305,7 +308,10 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => { mainWindow!.show() })
+  mainWindow.on('ready-to-show', () => {
+    mainWindow!.show()
+    if (is.dev) mainWindow!.webContents.openDevTools()
+  })
 
   // ウィンドウ位置・サイズを 500ms デバウンスで設定ファイルに保存
   const scheduleSaveBounds = (): void => {

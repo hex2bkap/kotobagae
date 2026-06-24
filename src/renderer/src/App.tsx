@@ -271,23 +271,39 @@ function App(): JSX.Element {
     }
   }, [settings])
 
+  // ── フォント・折り返しを view へ即時反映するヘルパー ────────────────────
+  // タブ切り替えで view.setState() を呼ぶと Compartment が初期値に戻るため、
+  // setState の直後にもここを呼ぶ（settings 変化時の useEffect と同じ処理）
+
+  const settingsRef = useRef<AppSettings | null>(settings)
+  settingsRef.current = settings
+
+  const applyDisplayToView = useCallback((view: EditorView, s: AppSettings) => {
+    const wrapExt = s.display?.wordWrap !== false ? EditorView.lineWrapping : []
+    view.dispatch({ effects: [
+      fontCompartment.reconfigure(buildFontTheme(s)),
+      wrapCompartment.reconfigure(wrapExt)
+    ]})
+  }, [])
+
   // ── フォント・折り返し設定をエディタに反映 ──────────────────────────────
 
   useEffect(() => {
     const view = viewRef.current
     if (!view || !settings) return
-    const wrapExt = settings.display?.wordWrap !== false ? EditorView.lineWrapping : []
-    view.dispatch({ effects: [
-      fontCompartment.reconfigure(buildFontTheme(settings)),
-      wrapCompartment.reconfigure(wrapExt)
-    ]})
+    console.log('[font effect] fontSize=', settings.display?.fontSize, 'theme=', settings.display?.theme)
+    applyDisplayToView(view, settings)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])  // settings 全体を監視（個別フィールドでは初回ロード時の view未生成を検出できない）
 
   // ── メニュー「表示」からのコマンドを受け取る ─────────────────────────────
 
   useEffect(() => {
+    let callCount = 0
     const off = window.api.onMenuDisplay((action, value) => {
+      callCount++
+      const thisCall = callCount
+      console.log(`[onMenuDisplay] action=${action} value=${String(value)} callCount=${thisCall}`)
       setSettings((prev) => {
         if (!prev) return prev
         const d = { ...prev.display }
@@ -296,6 +312,7 @@ function App(): JSX.Element {
         if (action === 'wordWrap') d.wordWrap = value as boolean
         if (action === 'fontSizeUp') d.fontSize = Math.min(d.fontSize + 2, 40)
         if (action === 'fontSizeDown') d.fontSize = Math.max(d.fontSize - 2, 10)
+        console.log(`[onMenuDisplay] prev.fontSize=${prev.display?.fontSize} next.fontSize=${d.fontSize} callCount=${thisCall}`)
         const next = { ...prev, display: d }
         window.api.settings.save(next)
         return next
@@ -609,10 +626,12 @@ function App(): JSX.Element {
 
     setActiveTabId(newId)
     view.setState(newTab.editorState)
+    const s = settingsRef.current
+    if (s) applyDisplayToView(view, s)
     await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view.focus()
-  }, [])
+  }, [applyDisplayToView])
 
   const closeTab = useCallback(async (id: string) => {
     const tab = tabsRef.current.find((t) => t.id === id)
@@ -634,7 +653,12 @@ function App(): JSX.Element {
       const newTab = makeNewTab()
       setTabs([newTab])
       setActiveTabId(newTab.id)
-      viewRef.current?.setState(newTab.editorState)
+      const v0 = viewRef.current
+      if (v0) {
+        v0.setState(newTab.editorState)
+        const s0 = settingsRef.current
+        if (s0) applyDisplayToView(v0, s0)
+      }
       await window.api.dict.setActiveDicts(newTab.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
@@ -645,12 +669,17 @@ function App(): JSX.Element {
     if (id === activeTabIdRef.current) {
       const next = remaining[Math.min(idx, remaining.length - 1)]
       setActiveTabId(next.id)
-      viewRef.current?.setState(next.editorState)
+      const v1 = viewRef.current
+      if (v1) {
+        v1.setState(next.editorState)
+        const s1 = settingsRef.current
+        if (s1) applyDisplayToView(v1, s1)
+      }
       await window.api.dict.setActiveDicts(next.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
     }
-  }, [makeNewTab, showConfirm])
+  }, [makeNewTab, showConfirm, applyDisplayToView])
 
   // ── ファイル操作 ──────────────────────────────────────────────────────
 
@@ -675,11 +704,15 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    view?.setState(newTab.editorState)
+    if (view) {
+      view.setState(newTab.editorState)
+      const s = settingsRef.current
+      if (s) applyDisplayToView(view, s)
+    }
     await window.api.dict.setActiveDicts(dictNames)
     closePopupRef.current()
     view?.focus()
-  }, [])
+  }, [applyDisplayToView])
 
   const handleNew = useCallback(async () => {
     const newTab = makeNewTab()
@@ -694,11 +727,15 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    view?.setState(newTab.editorState)
+    if (view) {
+      view.setState(newTab.editorState)
+      const s = settingsRef.current
+      if (s) applyDisplayToView(view, s)
+    }
     await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view?.focus()
-  }, [makeNewTab])
+  }, [makeNewTab, applyDisplayToView])
 
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
@@ -765,11 +802,15 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    view?.setState(newTab.editorState)
+    if (view) {
+      view.setState(newTab.editorState)
+      const s = settingsRef.current
+      if (s) applyDisplayToView(view, s)
+    }
     await window.api.dict.setActiveDicts([])
     closePopupRef.current()
     view?.focus()
-  }, [])
+  }, [applyDisplayToView])
 
   // ── 辞書トグル（チェックボックスドロップダウンから呼ばれる）───────────────
 
@@ -1054,6 +1095,8 @@ function App(): JSX.Element {
       setTabs(restoredTabs)
       setActiveTabId(activeTab.id)
       view.setState(activeTab.editorState)
+      const s = settingsRef.current
+      if (s) applyDisplayToView(view, s)
       await window.api.dict.setActiveDicts(activeTab.dictNames)
       view.focus()
     })
