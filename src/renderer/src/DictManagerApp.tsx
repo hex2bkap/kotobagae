@@ -584,7 +584,7 @@ export function DictManagerApp(): JSX.Element {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--kg-border)' }}>
 
         {/* ── Pane 1：辞書セット ── */}
-        <div style={{ width: 200, minWidth: 160, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
+        <div style={{ width: 200, minWidth: 160, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)' }}>
           <div style={{ ...PANE_HEADER, flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', whiteSpace: 'nowrap' }}>辞書セット</span>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -679,7 +679,7 @@ export function DictManagerApp(): JSX.Element {
         </div>
 
         {/* ── Pane 2：読み ── */}
-        <div style={{ width: 240, minWidth: 180, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)' }}>
+        <div style={{ width: 240, minWidth: 180, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--kg-border)' }}>
           <div style={PANE_HEADER}>
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', marginRight: 'auto' }}>読み</span>
             <button
