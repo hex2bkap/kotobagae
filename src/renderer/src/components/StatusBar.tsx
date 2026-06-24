@@ -13,9 +13,10 @@ interface Props {
   showWritingStats: boolean
   wordGoal: number         // 0 = 無効
   onLineJump: () => void
+  flashMessage?: string | null
 }
 
-export function StatusBar({ info, showWritingStats, wordGoal, onLineJump }: Props): JSX.Element {
+export function StatusBar({ info, showWritingStats, wordGoal, onLineJump, flashMessage }: Props): JSX.Element {
   const [selWithWS, setSelWithWS] = useState(false)
 
   const genkoPages = (info.charCount / 400).toFixed(1)
@@ -36,7 +37,8 @@ export function StatusBar({ info, showWritingStats, wordGoal, onLineJump }: Prop
       background: 'var(--kg-bg-secondary)',
       borderTop: '1px solid var(--kg-border)',
       fontSize: 12, color: 'var(--kg-text-secondary)',
-      flexShrink: 0, minHeight: 26, flexWrap: 'wrap'
+      flexShrink: 0, minHeight: 26, flexWrap: 'wrap',
+      position: 'relative'
     }}>
       {/* カーソル位置（クリックで行ジャンプ） */}
       <span
@@ -104,6 +106,17 @@ export function StatusBar({ info, showWritingStats, wordGoal, onLineJump }: Prop
             </>
           )}
         </>
+      )}
+
+      {/* 一時フラッシュメッセージ（右端） */}
+      {flashMessage && (
+        <span style={{
+          position: 'absolute', right: 12,
+          color: 'var(--kg-accent)', fontWeight: 'bold',
+          pointerEvents: 'none'
+        }}>
+          {flashMessage}
+        </span>
       )}
     </div>
   )

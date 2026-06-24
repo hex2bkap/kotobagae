@@ -12,7 +12,7 @@ interface Props {
 type TabKey = 'display' | 'dict' | 'other'
 
 const INTERVAL_OPTIONS = [1, 3, 5, 10, 15, 30]
-const MAX_AGE_OPTIONS = [0, 7, 14, 30, 60, 90]
+const MAX_AGE_OPTIONS = [1, 7, 14, 30, -1]   // -1 = 無期限（削除しない）
 const MAX_CANDIDATES_OPTIONS = [5, 10, 15, 20]
 const FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
   { label: 'Yu Gothic UI（既定）', value: 'Yu Gothic UI' },
@@ -280,7 +280,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
                   onChange={(e) => setSettings((prev) => prev ? { ...prev, autosave: { ...prev.autosave, maxAgeDays: Number(e.target.value) } } : prev)}
                   style={selectStyle}
                 >
-                  {MAX_AGE_OPTIONS.map((d) => <option key={d} value={d}>{d === 0 ? '削除しない' : `${d}日`}</option>)}
+                  {MAX_AGE_OPTIONS.map((d) => <option key={d} value={d}>{d === -1 ? '削除しない（無期限）' : `${d}日`}</option>)}
                 </select>
               </Row>
             </div>

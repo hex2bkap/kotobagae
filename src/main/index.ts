@@ -120,7 +120,7 @@ function clampBounds(
 // ── 自動保存の古いファイル削除 ─────────────────────────────────────────────
 
 function cleanOldAutosaves(maxAgeDays: number): void {
-  if (maxAgeDays === 0) return
+  if (maxAgeDays <= 0) return  // -1=無期限・0=旧互換（削除しない）
   const autosaveDir = getAutosaveDir()
   if (!existsSync(autosaveDir)) return
   const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000
@@ -466,6 +466,7 @@ ipcMain.handle('autosave:list', (): AutosaveFileInfo[] => {
       }
     })
     .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, 10)   // 直近10件のみ
 })
 
 ipcMain.handle('autosave:open', (_event, filePath: string): string | null => {

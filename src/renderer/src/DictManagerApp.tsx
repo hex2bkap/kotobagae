@@ -181,7 +181,7 @@ export function DictManagerApp(): JSX.Element {
 
   // Pane 1
   const [dicts, setDicts] = useState<string[]>([])
-  const [priorityOrder, setPriorityOrder] = useState<string[]>([])
+  const [_priorityOrder, setPriorityOrder] = useState<string[]>([])
   const [selectedDict, setSelectedDict] = useState<string | null>(null)
   const [renamingDict, setRenamingDict] = useState<string | null>(null)
   const [showNewDict, setShowNewDict] = useState(false)

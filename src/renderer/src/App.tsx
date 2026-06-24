@@ -11,6 +11,7 @@ import { AutosaveRestoreModal } from './components/AutosaveRestoreModal'
 import { SearchPanel } from './components/SearchPanel'
 import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { RegisterModal } from './components/RegisterModal'
+import { MultiUnsavedModal, type UnsavedTabInfo, type MultiUnsavedResult } from './components/MultiUnsavedModal'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../../shared/settings-types'
@@ -229,6 +230,17 @@ function App(): JSX.Element {
   // 集中モード（F11）
   const [focusMode, setFocusMode] = useState(false)
 
+  // ステータスバーの一時メッセージ
+  const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const statusMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 複数未保存ファイルモーダル（Promise-based）
+  const [multiUnsaved, setMultiUnsaved] = useState<{
+    tabs: UnsavedTabInfo[]
+    autosaveEnabled: boolean
+    onResult: (r: MultiUnsavedResult) => void
+  } | null>(null)
+
   // ステータスバー
   const [statusInfo, setStatusInfo] = useState<StatusInfo>({
     line: 1, col: 1, charCount: 0, selText: null, sessionDelta: 0
@@ -247,8 +259,6 @@ function App(): JSX.Element {
   const activeDictNames = activeTab?.dictNames ?? []
   const activeDictNamesRef = useRef<string[]>(activeDictNames)
   activeDictNamesRef.current = activeDictNames
-  // 優先トップの辞書（登録先の既定）
-  const primaryDictName = activeDictNames[0] ?? null
 
   const priorityOrderRef = useRef<string[]>(priorityOrder)
   priorityOrderRef.current = priorityOrder
@@ -337,7 +347,11 @@ function App(): JSX.Element {
       setSettings({
         windowBounds: s.windowBounds,
         autosave: { ...s.autosave },
-        dictSort: { ...s.dictSort },
+        dictSort: {
+          byFrequency: s.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
+          showCount: s.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount,
+          maxCandidates: s.dictSort?.maxCandidates ?? DEFAULT_SETTINGS.dictSort.maxCandidates
+        },
         display: { ...DEFAULT_SETTINGS.display, ...s.display },
         dictPriorityOrder: s.dictPriorityOrder ?? [],
         defaultDictNames: s.defaultDictNames ?? []
@@ -451,6 +465,24 @@ function App(): JSX.Element {
           message,
           onOk: () => { setConfirm(null); resolve(true) },
           onCancel: () => { setConfirm(null); resolve(false) }
+        })
+      }),
+    []
+  )
+
+  const showFlash = useCallback((msg: string, durationMs = 2000) => {
+    if (statusMsgTimerRef.current) clearTimeout(statusMsgTimerRef.current)
+    setStatusMsg(msg)
+    statusMsgTimerRef.current = setTimeout(() => setStatusMsg(null), durationMs)
+  }, [])
+
+  const showMultiUnsaved = useCallback(
+    (tabs: UnsavedTabInfo[], autosaveEnabled: boolean): Promise<MultiUnsavedResult> =>
+      new Promise((resolve) => {
+        setMultiUnsaved({
+          tabs,
+          autosaveEnabled,
+          onResult: (r) => { setMultiUnsaved(null); resolve(r) }
         })
       }),
     []
@@ -785,14 +817,9 @@ function App(): JSX.Element {
       const result = await window.api.saveFile(activeTab.filePath, content)
       if (!result.success) return
       setTabs((prev) => prev.map((t) => (t.id === activeId ? { ...t, dirty: false } : t)))
-      // 保存成功フィードバック: タイトルバーに「保存しました」を1.5秒表示
-      const name = activeTab.filePath ? basename(activeTab.filePath) : '無題'
-      window.api.setTitle(`${APP_NAME} — ${name} [保存しました]`)
-      setTimeout(() => {
-        window.api.setTitle(`${APP_NAME} — ${name}`)
-      }, 1500)
+      showFlash('保存しました')
     }
-  }, [])
+  }, [showFlash])
 
   const handleSaveAs = useCallback(async () => {
     const view = viewRef.current
@@ -902,7 +929,60 @@ function App(): JSX.Element {
     return window.api.onBeforeClose(async () => {
       const view = viewRef.current
       const currentId = activeTabIdRef.current
-      const sessionTabs = tabsRef.current.map((t) => {
+      const allTabs = tabsRef.current
+      const autosaveEnabled = settingsRef.current?.autosave.enabled ?? true
+
+      // 閉じる前に全ダーティタブを autosave へ明示 flush
+      for (const tab of allTabs) {
+        if (!tab.dirty || tab.missing) continue
+        const content = tab.id === currentId && view
+          ? view.state.doc.toString()
+          : tab.editorState.doc.toString()
+        if (!content.trim()) continue
+        const baseName = tab.filePath ? basename(tab.filePath) : '無題'
+        await window.api.autosave.save(content, baseName)
+      }
+
+      // 未保存タブの確認
+      const dirtyTabs = allTabs.filter((t) => t.dirty && !t.missing)
+      if (dirtyTabs.length === 1) {
+        const tab = dirtyTabs[0]
+        const name = tab.filePath ? basename(tab.filePath) : '無題'
+        const ok = await showConfirm(`「${name}」は保存されていません。\n閉じてよろしいですか？`)
+        if (!ok) return   // キャンセル → 閉じない
+      } else if (dirtyTabs.length >= 2) {
+        const unsavedInfos: UnsavedTabInfo[] = dirtyTabs.map((t) => ({
+          id: t.id,
+          name: t.filePath ? basename(t.filePath) : '無題',
+          filePath: t.filePath
+        }))
+        const result = await showMultiUnsaved(unsavedInfos, autosaveEnabled)
+
+        if (result.action === 'cancel') return   // キャンセル → 閉じない
+
+        if (result.action === 'saveSelected' && result.idsToSave.length > 0) {
+          // チェックされたファイルパスありタブを保存
+          for (const id of result.idsToSave) {
+            const tab = allTabs.find((t) => t.id === id)
+            if (!tab?.filePath) continue
+            const content = tab.id === currentId && view
+              ? view.state.doc.toString()
+              : tab.editorState.doc.toString()
+            await window.api.saveFile(tab.filePath, content)
+          }
+        }
+
+        // autosave オフ＋無題ダーティタブがある場合の強い警告
+        if (!autosaveEnabled && dirtyTabs.some((t) => !t.filePath)) {
+          const ok = await showConfirm(
+            '自動保存が無効のため、無題のタブの変更は失われます。\n本当に閉じてよろしいですか？'
+          )
+          if (!ok) return
+        }
+      }
+
+      // セッション保存 → 閉じる
+      const sessionTabs = allTabs.map((t) => {
         const state = t.id === currentId && view ? view.state : t.editorState
         return {
           filePath: t.filePath,
@@ -910,11 +990,11 @@ function App(): JSX.Element {
           dictNames: t.dictNames
         }
       })
-      const activeIdx = Math.max(0, tabsRef.current.findIndex((t) => t.id === currentId))
+      const activeIdx = Math.max(0, allTabs.findIndex((t) => t.id === currentId))
       await window.api.saveSession({ tabs: sessionTabs, activeTabIndex: activeIdx })
       window.api.confirmClose()
     })
-  }, [])
+  }, [showConfirm, showMultiUnsaved])
 
   // ── CodeMirror 初期化 ＋ セッション復元 ──────────────────────────────
 
@@ -1287,6 +1367,7 @@ function App(): JSX.Element {
           showWritingStats={displaySettings.showWritingStats}
           wordGoal={displaySettings.wordGoal}
           onLineJump={handleLineJump}
+          flashMessage={statusMsg}
         />
       )}
 
@@ -1345,6 +1426,15 @@ function App(): JSX.Element {
         <AutosaveRestoreModal
           onClose={() => setShowAutosaveRestore(false)}
           onOpen={handleOpenFromAutosave}
+        />
+      )}
+
+      {/* 複数未保存ファイル選択保存モーダル */}
+      {multiUnsaved && (
+        <MultiUnsavedModal
+          tabs={multiUnsaved.tabs}
+          autosaveEnabled={multiUnsaved.autosaveEnabled}
+          onResult={multiUnsaved.onResult}
         />
       )}
     </div>
