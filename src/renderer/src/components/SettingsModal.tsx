@@ -138,7 +138,11 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
               </select>
             </Row>
 
-            <Row label="文字色（ライト/和紙）">
+            <p style={{ margin: '8px 0 6px', fontSize: 12, color: 'var(--kg-text-muted)' }}>
+              テーマの明るさごとに文字色を持てます
+            </p>
+
+            <Row label="明るいテーマ用">
               <input
                 type="color"
                 value={settings.display.textColorLight || '#2c2416'}
@@ -151,7 +155,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
               {!settings.display.textColorLight && <span style={unitStyle}>テーマ既定</span>}
             </Row>
 
-            <Row label="文字色（ダーク/墨夜）">
+            <Row label="暗いテーマ用">
               <input
                 type="color"
                 value={settings.display.textColorDark || '#c8c0b0'}
@@ -177,11 +181,11 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
             />
 
             <div style={{ borderTop: '1px solid var(--kg-border)', marginTop: 8, paddingTop: 10 }}>
-              <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--kg-text-secondary)', fontWeight: 'bold' }}>執筆統計</p>
+              <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--kg-text-secondary)', fontWeight: 'bold' }}>執筆の進捗</p>
               <CheckRow
                 checked={settings.display.showWritingStats}
                 onChange={(v) => setDisplay({ showWritingStats: v })}
-                label="ステータスバーに執筆統計を表示する"
+                label="ステータスバーに進捗を表示する（今回の文字数・目標達成率）"
               />
               <div style={{ ...rowStyle, opacity: settings.display.showWritingStats ? 1 : 0.4 }}>
                 <label style={{ fontSize: 13, color: 'var(--kg-text-primary)' }}>文字数目標</label>
@@ -211,12 +215,12 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
             <CheckRow
               checked={settings.dictSort.byFrequency}
               onChange={(v) => setDictSort({ byFrequency: v })}
-              label="候補を頻度でおすすめ順にする（A）"
+              label="変換候補をよく使う順に並べる"
             />
             <CheckRow
               checked={settings.dictSort.showCount}
               onChange={(v) => setDictSort({ showCount: v })}
-              label="辞書管理ウィンドウに使用回数を表示する（B）"
+              label="辞書管理で使用回数を表示する"
             />
             <Row label="最大表示候補数">
               <select
