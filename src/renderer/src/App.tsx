@@ -1324,10 +1324,10 @@ function App(): JSX.Element {
             className="kg-tb-btn"
           ><TbIcon paths={ICONS.settings} aria-hidden /></button>
 
-          {/* スペーサー（辞書DDを最右端へ押し出す） */}
-          <div style={{ flex: 1 }} />
+          {/* セパレータ */}
+          <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
 
-          {/* 辞書ドロップダウン（最右端・可変幅を端に隔離） */}
+          {/* 辞書ドロップダウン（固定ボタンの右隣・可変幅を端に隔離） */}
           <DictSelector
             dictList={dictList}
             priorityOrder={priorityOrder}
