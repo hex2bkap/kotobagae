@@ -96,12 +96,12 @@ export function StatusBar({ info, showWritingStats, wordGoal, onLineJump, flashM
               }}>
                 <div style={{
                   width: `${goalPct}%`, height: '100%',
-                  background: achieved ? '#27ae60' : 'var(--kg-accent)',
+                  background: achieved ? 'var(--kg-success)' : 'var(--kg-accent)',
                   borderRadius: 4, transition: 'width 0.3s'
                 }} />
               </div>
               {achieved && (
-                <span style={{ color: '#27ae60', fontWeight: 'bold' }}>達成！</span>
+                <span style={{ color: 'var(--kg-success)', fontWeight: 'bold' }}>達成！</span>
               )}
             </>
           )}

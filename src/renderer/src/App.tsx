@@ -144,7 +144,7 @@ function DictSelector({
                   style={{ margin: 0 }}
                 />
                 {isPrimary && (
-                  <span title="この辞書に登録されます" style={{ fontSize: 9, color: '#c00', fontWeight: 'bold' }}>●</span>
+                  <span title="この辞書に登録されます" style={{ fontSize: 9, color: 'var(--kg-accent)', fontWeight: 'bold' }}>●</span>
                 )}
                 <span title={name} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
               </label>
@@ -1246,7 +1246,7 @@ function App(): JSX.Element {
                   cursor: 'pointer', fontSize: 13,
                   color: tab.missing ? 'var(--kg-missing-text)' : 'var(--kg-text-primary)',
                   whiteSpace: 'nowrap',
-                  boxShadow: isActive ? 'inset 0 2px 0 #4a90d9' : 'none',
+                  boxShadow: isActive ? 'inset 0 2px 0 var(--kg-accent)' : 'none',
                   userSelect: 'none'
                 }}
               >
@@ -1277,7 +1277,7 @@ function App(): JSX.Element {
       )}
 
       {/* ツールバー（集中モードでは非表示）*/}
-      {/* 構成: [新規][開く][保存] | 辞書DD | [検索][集中][設定] */}
+      {/* 構成: [新規][開く][保存] | [検索][集中][設定] | 辞書DD（最右端） */}
       {!focusMode && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 2,
@@ -1304,19 +1304,7 @@ function App(): JSX.Element {
           {/* セパレータ */}
           <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
 
-          {/* 辞書ドロップダウン */}
-          <DictSelector
-            dictList={dictList}
-            priorityOrder={priorityOrder}
-            activeDictNames={activeDictNames}
-            onToggle={handleDictToggle}
-            onOpenManager={() => window.api.dict.openManager()}
-          />
-
-          {/* セパレータ */}
-          <div style={{ width: 1, height: 18, background: 'var(--kg-border-strong)', margin: '0 6px', flexShrink: 0 }} />
-
-          {/* 右グループ: 表示操作 */}
+          {/* 中グループ: 表示操作 */}
           <button
             onClick={() => openSearchRef.current(false)}
             title="検索 (Ctrl+F)"
@@ -1335,6 +1323,18 @@ function App(): JSX.Element {
             aria-label="設定"
             className="kg-tb-btn"
           ><TbIcon paths={ICONS.settings} aria-hidden /></button>
+
+          {/* スペーサー（辞書DDを最右端へ押し出す） */}
+          <div style={{ flex: 1 }} />
+
+          {/* 辞書ドロップダウン（最右端・可変幅を端に隔離） */}
+          <DictSelector
+            dictList={dictList}
+            priorityOrder={priorityOrder}
+            activeDictNames={activeDictNames}
+            onToggle={handleDictToggle}
+            onOpenManager={() => window.api.dict.openManager()}
+          />
         </div>
       )}
 

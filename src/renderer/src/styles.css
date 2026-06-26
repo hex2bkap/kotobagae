@@ -22,6 +22,7 @@
   --kg-accent-soft:   rgba(192,48,32,0.12);
   --kg-selection:     rgba(192,48,32,0.18);
   --kg-editor-text:   #1A1A1A;
+  --kg-success:       #6B7A4F;
 }
 
 /* ダーク：温かみのある暗色 */
@@ -45,6 +46,7 @@
   --kg-accent-soft:   rgba(200,72,48,0.18);
   --kg-selection:     rgba(200,72,48,0.25);
   --kg-editor-text:   #DDD6C8;
+  --kg-success:       #8A9E6A;
 }
 
 /* 和紙：生成り温暖ライト（既定）*/
@@ -70,6 +72,7 @@
   /* 和紙テーマはタイトルバーだけ暗色（墨色）*/
   --kg-titlebar-text: #EBE6DA;
   --kg-editor-text:   #1C1815;
+  --kg-success:       #6B7A4F;
 }
 
 /* 墨夜：極暗・温暖 */
@@ -93,6 +96,7 @@
   --kg-accent-soft:   rgba(192,64,40,0.18);
   --kg-selection:     rgba(192,64,40,0.25);
   --kg-editor-text:   #D8D0C0;
+  --kg-success:       #8A9E6A;
 }
 
 /* ── ベースリセット ─────────────────────────────────────────────────────── */
@@ -101,7 +105,71 @@ body {
   overflow: hidden;
   background: var(--kg-bg-primary);
   color: var(--kg-text-primary);
-  font-family: "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;
+}
+
+/* ── ネイティブUI要素のテーマ化（B） ──────────────────────────────────── */
+
+/* チェックボックス：アクセントカラーを朱色に */
+input[type="checkbox"] {
+  accent-color: var(--kg-accent);
+}
+
+/* ラジオボタン */
+input[type="radio"] {
+  accent-color: var(--kg-accent);
+}
+
+/* レンジスライダー */
+input[type="range"] {
+  accent-color: var(--kg-accent);
+}
+
+/* テキスト入力・テキストエリア・select */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+  background: var(--kg-bg-primary);
+  color: var(--kg-text-primary);
+  border: 1px solid var(--kg-border-strong);
+  border-radius: 3px;
+  outline: none;
+  font-family: inherit;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--kg-accent);
+  box-shadow: 0 0 0 2px var(--kg-accent-soft);
+}
+
+/* スクロールバー（Chromium/Electron） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--kg-bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--kg-border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kg-text-muted);
+}
+/* ダーク系テーマはサムをより暗く（背景に溶け込みすぎないよう調整） */
+[data-theme="dark"] ::-webkit-scrollbar-thumb,
+[data-theme="sumi"] ::-webkit-scrollbar-thumb {
+  background: var(--kg-bg-tertiary);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+[data-theme="sumi"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--kg-text-muted);
 }
 
 /* ── エディタ本文色（テーマ別・ユーザー上書き可）──────────────────────── */
