@@ -69,6 +69,7 @@ interface KotobagaeAPI {
   onMenuSettings: (cb: () => void) => () => void
   onMenuAutosaveRestore: (cb: () => void) => () => void
   onMenuShortcuts: (cb: () => void) => () => void
+  onMenuAbout: (cb: () => void) => () => void
   onMenuDisplay: (cb: (action: string, value?: unknown) => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
@@ -87,6 +88,7 @@ interface KotobagaeAPI {
     open: (filePath: string) => Promise<string | null>
   }
   openDataDir: () => void
+  openAutosaveDir: () => void
   dict: {
     listDicts: () => Promise<string[]>
     getActiveDicts: () => Promise<string[]>

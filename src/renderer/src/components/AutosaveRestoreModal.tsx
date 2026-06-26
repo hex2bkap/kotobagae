@@ -86,15 +86,23 @@ export function AutosaveRestoreModal({ onClose, onOpen }: Props): JSX.Element {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-          <button onClick={onClose} style={cancelButtonStyle}>閉じる</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 16 }}>
           <button
-            onClick={handleOpen}
-            disabled={!selectedPath}
-            style={{ ...okButtonStyle, opacity: selectedPath ? 1 : 0.5, cursor: selectedPath ? 'pointer' : 'default' }}
+            onClick={() => window.api.openAutosaveDir()}
+            style={folderButtonStyle}
           >
-            新しいタブで開く
+            フォルダを開く
           </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={cancelButtonStyle}>閉じる</button>
+            <button
+              onClick={handleOpen}
+              disabled={!selectedPath}
+              style={{ ...okButtonStyle, opacity: selectedPath ? 1 : 0.5, cursor: selectedPath ? 'pointer' : 'default' }}
+            >
+              新しいタブで開く
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -111,6 +119,11 @@ const modalStyle: React.CSSProperties = {
   width: 560, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
   display: 'flex', flexDirection: 'column',
   color: 'var(--kg-text-primary)'
+}
+const folderButtonStyle: React.CSSProperties = {
+  padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+  border: '1px solid var(--kg-border)', borderRadius: 4,
+  background: 'transparent', color: 'var(--kg-text-secondary)'
 }
 const cancelButtonStyle: React.CSSProperties = {
   padding: '6px 16px', fontSize: 13, cursor: 'pointer',

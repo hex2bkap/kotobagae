@@ -291,14 +291,7 @@ function buildMenu(): void {
       submenu: [
         {
           label: 'このアプリについて',
-          click: () => {
-            dialog.showMessageBox(mainWindow!, {
-              type: 'info',
-              title: 'コトバガエについて',
-              message: 'コトバガエ',
-              detail: '作品ごとに辞書を切り替えられる、日本語創作執筆向けテキストエディタ。\n\nバージョン: 1.0.0'
-            })
-          }
+          click: () => mainWindow?.webContents.send('menu:about')
         },
         { label: 'ショートカット一覧', click: () => mainWindow?.webContents.send('menu:showShortcuts') }
       ]
@@ -375,6 +368,12 @@ function createWindow(): void {
     e.preventDefault()
     dictManager?.flushDirty()
     mainWindow?.webContents.send('app:beforeClose')
+  })
+
+  // メインウィンドウが破棄されたら辞書管理ウィンドウも閉じる
+  mainWindow.on('closed', () => {
+    if (dictWindow && !dictWindow.isDestroyed()) dictWindow.close()
+    mainWindow = null
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -525,6 +524,7 @@ ipcMain.handle('autosave:open', (_event, filePath: string): string | null => {
 // Shell
 
 ipcMain.on('shell:openDataDir', () => { shell.openPath(dataDir) })
+ipcMain.on('shell:openAutosaveDir', () => { shell.openPath(getAutosaveDir()) })
 
 // 辞書
 

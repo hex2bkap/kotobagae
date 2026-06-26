@@ -13,6 +13,7 @@ import { StatusBar, type StatusInfo } from './components/StatusBar'
 import { RegisterModal } from './components/RegisterModal'
 import { MultiUnsavedModal, type UnsavedTabInfo, type MultiUnsavedResult } from './components/MultiUnsavedModal'
 import { ShortcutModal } from './components/ShortcutModal'
+import { AboutModal } from './components/AboutModal'
 import { TbIcon, ICONS } from './components/TbIcon'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
@@ -232,6 +233,7 @@ function App(): JSX.Element {
 
   // ショートカット一覧モーダル
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
   // ステータスバーの一時メッセージ
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
@@ -902,7 +904,8 @@ function App(): JSX.Element {
     const off5 = window.api.onMenuSettings(() => setShowSettings(true))
     const off6 = window.api.onMenuAutosaveRestore(() => setShowAutosaveRestore(true))
     const off7 = window.api.onMenuShortcuts(() => setShowShortcuts(true))
-    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7() }
+    const off8 = window.api.onMenuAbout(() => setShowAbout(true))
+    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8() }
   }, [handleNew, handleOpen, handleSave, handleSaveAs])
 
   // ── 2重起動でファイルを受け取る ───────────────────────────────────────
@@ -1467,6 +1470,9 @@ function App(): JSX.Element {
 
       {/* ショートカット一覧 */}
       {showShortcuts && <ShortcutModal onClose={() => setShowShortcuts(false)} />}
+
+      {/* このアプリについて */}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
     </div>
   )
 }

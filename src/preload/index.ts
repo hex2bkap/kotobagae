@@ -62,6 +62,11 @@ const api = {
     return () => ipcRenderer.removeListener('menu:showShortcuts', cb)
   },
 
+  onMenuAbout: (cb: () => void) => {
+    ipcRenderer.on('menu:about', cb)
+    return () => ipcRenderer.removeListener('menu:about', cb)
+  },
+
   onMenuDisplay: (cb: (action: string, value?: unknown) => void) => {
     const handler = (_e: Electron.IpcRendererEvent, payload: { action: string; value?: unknown }) =>
       cb(payload.action, payload.value)
@@ -112,6 +117,7 @@ const api = {
 
   // Shell
   openDataDir: () => ipcRenderer.send('shell:openDataDir'),
+  openAutosaveDir: () => ipcRenderer.send('shell:openAutosaveDir'),
 
   // 辞書 API
   dict: {
