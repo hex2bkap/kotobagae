@@ -26,7 +26,7 @@ interface SettingsData {
   windowBounds: { x: number; y: number; width: number; height: number } | null
   dictWindowBounds?: { x: number; y: number; width: number; height: number } | null
   autosave: { enabled: boolean; intervalMinutes: number; maxAgeDays: number }
-  dictSort: { byFrequency: boolean; showCount: boolean; maxCandidates: number }
+  dictSort: { byFrequency: boolean; showCount: boolean; maxSearchLen: number }
   display: {
     theme: 'light' | 'dark' | 'washi' | 'sumi'
     showWritingStats: boolean

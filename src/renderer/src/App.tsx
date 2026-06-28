@@ -20,7 +20,6 @@ import type { AppSettings } from '../../shared/settings-types'
 import { DEFAULT_SETTINGS } from '../../shared/settings-types'
 
 const APP_NAME = 'コトバガエ'
-const MAX_SEARCH_LEN = 10
 const MAX_ACTIVE_DICTS = 5
 
 interface Tab {
@@ -540,7 +539,8 @@ function App(): JSX.Element {
   const triggerSearch = useCallback(async (view: EditorView) => {
     if (isComposingRef.current) return
     const pos = view.state.selection.main.head
-    const textBefore = view.state.doc.sliceString(Math.max(0, pos - MAX_SEARCH_LEN), pos)
+    const maxLen = settingsRef.current?.dictSort?.maxSearchLen ?? 10
+    const textBefore = view.state.doc.sliceString(Math.max(0, pos - maxLen), pos)
     const result = await window.api.dict.getCandidates(textBefore)
     if (!result) { closePopup(); return }
     setPopup({

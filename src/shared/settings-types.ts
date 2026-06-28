@@ -9,7 +9,7 @@ export interface AppSettings {
   dictSort: {
     byFrequency: boolean
     showCount: boolean
-    maxCandidates: number   // 変換候補の最大表示件数（既定 10）
+    maxSearchLen: number   // 辞書照合の最大読み文字数（既定 10）
   }
   display: {
     theme: 'light' | 'dark' | 'washi' | 'sumi'
@@ -32,7 +32,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   windowBounds: null,
   dictWindowBounds: null,
   autosave: { enabled: true, intervalMinutes: 5, maxAgeDays: 30 },
-  dictSort: { byFrequency: true, showCount: false, maxCandidates: 10 },
+  dictSort: { byFrequency: true, showCount: false, maxSearchLen: 10 },
   display: {
     theme: 'washi',
     showWritingStats: false,

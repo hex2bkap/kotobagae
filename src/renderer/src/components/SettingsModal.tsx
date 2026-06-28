@@ -13,7 +13,7 @@ type TabKey = 'display' | 'dict' | 'other'
 
 const INTERVAL_OPTIONS = [1, 3, 5, 10, 15, 30]
 const MAX_AGE_OPTIONS = [1, 7, 14, 30, -1]   // -1 = 無期限（削除しない）
-const MAX_CANDIDATES_OPTIONS = [5, 10, 15, 20]
+const MAX_SEARCH_LEN_OPTIONS = [5, 10, 15, 20]
 const FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
   { label: 'Yu Gothic UI（既定）', value: 'Yu Gothic UI' },
   { label: 'Meiryo', value: 'Meiryo' },
@@ -43,7 +43,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
         dictSort: {
           byFrequency: s.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
           showCount: s.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount,
-          maxCandidates: s.dictSort?.maxCandidates ?? DEFAULT_SETTINGS.dictSort.maxCandidates
+          maxSearchLen: s.dictSort?.maxSearchLen ?? DEFAULT_SETTINGS.dictSort.maxSearchLen
         },
         display: { ...DEFAULT_SETTINGS.display, ...s.display },
         dictPriorityOrder: s.dictPriorityOrder ?? [],
@@ -222,13 +222,13 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
               onChange={(v) => setDictSort({ showCount: v })}
               label="辞書管理で使用回数を表示する"
             />
-            <Row label="最大表示候補数">
+            <Row label="最大検索文字数">
               <select
-                value={settings.dictSort.maxCandidates}
-                onChange={(e) => setDictSort({ maxCandidates: Number(e.target.value) })}
+                value={settings.dictSort.maxSearchLen}
+                onChange={(e) => setDictSort({ maxSearchLen: Number(e.target.value) })}
                 style={selectStyle}
               >
-                {MAX_CANDIDATES_OPTIONS.map((n) => <option key={n} value={n}>{n}件</option>)}
+                {MAX_SEARCH_LEN_OPTIONS.map((n) => <option key={n} value={n}>{n}文字</option>)}
               </select>
             </Row>
 
