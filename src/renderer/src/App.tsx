@@ -354,7 +354,7 @@ function App(): JSX.Element {
         dictSort: {
           byFrequency: s.dictSort?.byFrequency ?? DEFAULT_SETTINGS.dictSort.byFrequency,
           showCount: s.dictSort?.showCount ?? DEFAULT_SETTINGS.dictSort.showCount,
-          maxCandidates: s.dictSort?.maxCandidates ?? DEFAULT_SETTINGS.dictSort.maxCandidates
+          maxSearchLen: s.dictSort?.maxSearchLen ?? DEFAULT_SETTINGS.dictSort.maxSearchLen
         },
         display: { ...DEFAULT_SETTINGS.display, ...s.display },
         dictPriorityOrder: s.dictPriorityOrder ?? [],
