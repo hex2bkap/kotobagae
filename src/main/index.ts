@@ -487,6 +487,7 @@ ipcMain.handle('settings:save', (_event, s: AppSettings) => {
   // windowBounds はメインが move/resize で管理する状態。モーダルの値で上書きしない
   currentSettings = { ...s, windowBounds: currentSettings.windowBounds }
   saveSettings(currentSettings)
+  buildMenu()  // 折り返し・太字・テーマ等のチェック状態をメニューに即反映
 })
 
 // 自動保存
