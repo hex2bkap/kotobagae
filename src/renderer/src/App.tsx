@@ -867,7 +867,8 @@ function App(): JSX.Element {
     const state = EditorState.create({ doc: content, extensions: extensionsRef.current! })
     const newTab: Tab = {
       id: newTabId(), filePath: null, editorState: state,
-      dirty: true, missing: false, dictNames: []
+      dirty: true, missing: false, dictNames: [],
+      sessionStartChars: content.replace(/\s/g, '').length
     }
     const view = viewRef.current
     const currentId = activeTabIdRef.current
