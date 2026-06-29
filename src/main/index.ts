@@ -201,6 +201,10 @@ function createOrFocusDictWindow(): void {
   dictWindow.on('resize', scheduleDict)
   dictWindow.on('focus', () => buildDictMenu())
 
+  dictWindow.on('close', (e) => {
+    e.preventDefault()
+    dictWindow?.webContents.send('dict:flush-before-close')
+  })
   dictWindow.on('closed', () => { dictWindow = null })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -457,6 +461,7 @@ ipcMain.handle('file:saveAs', async (_event, content: string) => {
 
 ipcMain.on('window:setTitle', (_event, title: string) => { mainWindow?.setTitle(title) })
 ipcMain.on('window:confirmClose', () => { mainWindow?.destroy() })
+ipcMain.on('dict:flush-done', () => { dictWindow?.destroy() })
 
 // セッション
 

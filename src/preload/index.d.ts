@@ -113,6 +113,8 @@ interface KotobagaeAPI {
     recordUsage: (dictName: string, reading: string, word: string) => Promise<void>
     notifyListUpdated: () => Promise<void>
     onListUpdated: (cb: () => void) => () => void
+    onFlushBeforeClose: (cb: () => void) => () => void
+    flushDone: () => void
   }
   contextMenu: {
     show: (hasSelection: boolean) => void

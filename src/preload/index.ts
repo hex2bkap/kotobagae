@@ -169,7 +169,12 @@ const api = {
     onListUpdated: (cb: () => void) => {
       ipcRenderer.on('dict:listUpdated', cb)
       return () => ipcRenderer.removeListener('dict:listUpdated', cb)
-    }
+    },
+    onFlushBeforeClose: (cb: () => void) => {
+      ipcRenderer.on('dict:flush-before-close', cb)
+      return () => ipcRenderer.removeListener('dict:flush-before-close', cb)
+    },
+    flushDone: () => ipcRenderer.send('dict:flush-done')
   },
 
   contextMenu: {

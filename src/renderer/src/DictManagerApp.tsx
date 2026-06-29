@@ -59,6 +59,7 @@ function MemoInput({
   return (
     <input
       value={val}
+      title={val}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
@@ -221,6 +222,7 @@ export function DictManagerApp(): JSX.Element {
   const addReadingRef = useRef<HTMLInputElement>(null)
   const addCandRef = useRef<HTMLInputElement>(null)
   const addCandidateRef = useRef<HTMLInputElement>(null)
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve())
 
   // ── ヘルパー ──────────────────────────────────────────────────────────────
 
@@ -235,8 +237,9 @@ export function DictManagerApp(): JSX.Element {
 
   const withSave = useCallback(async (fn: () => Promise<unknown>): Promise<void> => {
     setSaveStatus('saving')
-    await fn()
-    // 最小表示時間を設けて「保存中…」が見えるようにする
+    const p = fn().then(() => undefined)
+    saveChainRef.current = p
+    await p
     setTimeout(() => setSaveStatus('saved'), 700)
   }, [])
 
@@ -290,6 +293,16 @@ export function DictManagerApp(): JSX.Element {
   // ── 初期ロード ────────────────────────────────────────────────────────────
 
   // テーマ同期：初回 + フォーカス時に最新テーマを適用
+  useEffect(() => {
+    const cleanup = window.api.dict.onFlushBeforeClose(async () => {
+      document.activeElement instanceof HTMLElement && document.activeElement.blur()
+      await new Promise<void>((r) => setTimeout(r, 0))
+      await saveChainRef.current
+      window.api.dict.flushDone()
+    })
+    return cleanup
+  }, [])
+
   useEffect(() => {
     const applyTheme = async (): Promise<void> => {
       const s = await window.api.settings.load()
@@ -578,7 +591,7 @@ export function DictManagerApp(): JSX.Element {
   // ── 描画 ──────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif', fontSize: 13, color: 'var(--kg-text-primary)', overflow: 'hidden', background: 'var(--kg-bg-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontSize: 13, color: 'var(--kg-text-primary)', overflow: 'hidden', background: 'var(--kg-bg-primary)' }}>
 
       {/* ── 3ペイン エリア ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--kg-border)' }}>
