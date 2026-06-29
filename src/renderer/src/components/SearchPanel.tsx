@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { EditorView } from '@codemirror/view'
 import {
   SearchQuery, setSearchQuery,
-  findNext, findPrevious, replaceNext, replaceAll,
+  replaceNext, replaceAll,
   openSearchPanel, closeSearchPanel,
   SearchCursor
 } from '@codemirror/search'
@@ -50,31 +50,40 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
     }
   }, [showReplace, show])
 
-  // SearchCursor で全文走査して総数・現在位置を取得（DOM 数えより正確）
-  const countWithCursor = useCallback((q: string, cs: boolean, view: EditorView): MatchInfo => {
-    if (!q) return { total: 0, current: 0, capped: false }
+  // SearchCursor で全マッチを列挙し、現在選択に基づいて next/prev へ移動する自前ナビ
+  // findNext/findPrevious の代わりに使用（CM の findPrevious が前に戻らないバグ回避）
+  const navigateMatch = useCallback((q: string, cs: boolean, direction: 'next' | 'prev'): MatchInfo => {
+    const view = viewRef.current
+    if (!view || !q) return { total: 0, current: 0, capped: false }
 
     const normalize = cs ? undefined : (s: string) => s.toLowerCase()
     const { from: selFrom, to: selTo } = view.state.selection.main
     const cursor = new SearchCursor(view.state.doc, q, 0, undefined, normalize)
 
-    let total = 0
-    let current = 0
-    let capped = false
-
+    const matches: { from: number; to: number }[] = []
     while (!cursor.next().done) {
-      total++
-      if (cursor.value.from === selFrom && cursor.value.to === selTo) {
-        current = total
-      }
-      if (total >= 1000) {
-        capped = true
-        break
-      }
+      matches.push({ from: cursor.value.from, to: cursor.value.to })
+      if (matches.length >= 1000) break
     }
 
-    return { total, current, capped }
-  }, [])
+    if (matches.length === 0) return { total: 0, current: 0, capped: false }
+
+    const capped = matches.length >= 1000
+    const currentIdx = matches.findIndex(m => m.from === selFrom && m.to === selTo)
+    let nextIdx: number
+    if (currentIdx === -1) {
+      nextIdx = direction === 'next' ? 0 : matches.length - 1
+    } else {
+      nextIdx = direction === 'next'
+        ? (currentIdx + 1) % matches.length
+        : (currentIdx - 1 + matches.length) % matches.length
+    }
+
+    const target = matches[nextIdx]
+    view.dispatch({ selection: { anchor: target.from, head: target.to }, scrollIntoView: true })
+
+    return { total: matches.length, current: nextIdx + 1, capped }
+  }, [viewRef])
 
   // クエリ変更時：CM の検索状態を更新し、最初のヒットへ自動移動（インクリメンタル検索）
   const updateSearchQuery = useCallback((q: string, cs: boolean) => {
@@ -83,11 +92,12 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
 
     view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: q, caseSensitive: cs })) })
 
-    // 検索時に最初のヒットへ移動 → 「置換」が1回で効くようになる
-    if (q) findNext(view)
-
-    setMatchInfo(countWithCursor(q, cs, view))
-  }, [viewRef, countWithCursor])
+    if (q) {
+      setMatchInfo(navigateMatch(q, cs, 'next'))
+    } else {
+      setMatchInfo({ total: 0, current: 0, capped: false })
+    }
+  }, [viewRef, navigateMatch])
 
   const handleQueryChange = useCallback((val: string) => {
     setQuery(val)
@@ -100,26 +110,31 @@ export function SearchPanel({ viewRef, show, showReplace, onToggleReplace, onClo
     updateSearchQuery(query, next)
   }, [caseSensitive, query, updateSearchQuery])
 
-  // 移動・置換後に件数を再計算
+  // 置換後に件数を再計算（移動なし）
   const refreshMatchInfo = useCallback(() => {
     const view = viewRef.current
-    if (!view) return
-    setMatchInfo(countWithCursor(query, caseSensitive, view))
-  }, [viewRef, query, caseSensitive, countWithCursor])
+    if (!view || !query) return
+    const normalize = caseSensitive ? undefined : (s: string) => s.toLowerCase()
+    const { from: selFrom, to: selTo } = view.state.selection.main
+    const cursor = new SearchCursor(view.state.doc, query, 0, undefined, normalize)
+    let total = 0; let current = 0; let capped = false
+    while (!cursor.next().done) {
+      total++
+      if (cursor.value.from === selFrom && cursor.value.to === selTo) current = total
+      if (total >= 1000) { capped = true; break }
+    }
+    setMatchInfo({ total, current, capped })
+  }, [viewRef, query, caseSensitive])
 
   const handleFindNext = useCallback(() => {
-    const view = viewRef.current
-    if (!view || !query) return
-    findNext(view)
-    refreshMatchInfo()
-  }, [viewRef, query, refreshMatchInfo])
+    if (!query) return
+    setMatchInfo(navigateMatch(query, caseSensitive, 'next'))
+  }, [query, caseSensitive, navigateMatch])
 
   const handleFindPrev = useCallback(() => {
-    const view = viewRef.current
-    if (!view || !query) return
-    findPrevious(view)
-    refreshMatchInfo()
-  }, [viewRef, query, refreshMatchInfo])
+    if (!query) return
+    setMatchInfo(navigateMatch(query, caseSensitive, 'prev'))
+  }, [query, caseSensitive, navigateMatch])
 
   const handleReplaceNext = useCallback(() => {
     const view = viewRef.current
