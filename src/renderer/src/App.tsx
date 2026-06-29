@@ -309,6 +309,14 @@ function App(): JSX.Element {
     ]})
   }, [])
 
+  // タブを view に表示する一連操作（setState + 表示設定再適用 + ステータス更新）を不可分にまとめる
+  const showTabInView = useCallback((view: EditorView, tab: Tab) => {
+    view.setState(tab.editorState)
+    const s = settingsRef.current
+    if (s) applyDisplayToView(view, s)
+    setStatusInfo(computeStatusInfo(tab.editorState, tab.sessionStartChars))
+  }, [applyDisplayToView])
+
   // ── フォント・折り返し設定をエディタに反映 ──────────────────────────────
 
   useEffect(() => {
@@ -697,14 +705,11 @@ function App(): JSX.Element {
     if (!newTab) return
 
     setActiveTabId(newId)
-    view.setState(newTab.editorState)
-    setStatusInfo(computeStatusInfo(newTab.editorState, newTab.sessionStartChars))
-    const s = settingsRef.current
-    if (s) applyDisplayToView(view, s)
+    showTabInView(view, newTab)
     await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view.focus()
-  }, [applyDisplayToView])
+  }, [showTabInView])
 
   const closeTab = useCallback(async (id: string) => {
     const tab = tabsRef.current.find((t) => t.id === id)
@@ -728,12 +733,7 @@ function App(): JSX.Element {
       setTabs([newTab])
       setActiveTabId(newTab.id)
       const v0 = viewRef.current
-      if (v0) {
-        v0.setState(newTab.editorState)
-        setStatusInfo(computeStatusInfo(newTab.editorState, newTab.sessionStartChars))
-        const s0 = settingsRef.current
-        if (s0) applyDisplayToView(v0, s0)
-      }
+      if (v0) showTabInView(v0, newTab)
       await window.api.dict.setActiveDicts(newTab.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
@@ -745,17 +745,12 @@ function App(): JSX.Element {
       const next = remaining[Math.min(idx, remaining.length - 1)]
       setActiveTabId(next.id)
       const v1 = viewRef.current
-      if (v1) {
-        v1.setState(next.editorState)
-        setStatusInfo(computeStatusInfo(next.editorState, next.sessionStartChars))
-        const s1 = settingsRef.current
-        if (s1) applyDisplayToView(v1, s1)
-      }
+      if (v1) showTabInView(v1, next)
       await window.api.dict.setActiveDicts(next.dictNames)
       closePopupRef.current()
       viewRef.current?.focus()
     }
-  }, [makeNewTab, showConfirm, applyDisplayToView])
+  }, [makeNewTab, showConfirm, showTabInView])
 
   // ── ファイル操作 ──────────────────────────────────────────────────────
 
@@ -782,15 +777,11 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    if (view) {
-      view.setState(newTab.editorState)
-      const s = settingsRef.current
-      if (s) applyDisplayToView(view, s)
-    }
+    if (view) showTabInView(view, newTab)
     await window.api.dict.setActiveDicts(dictNames)
     closePopupRef.current()
     view?.focus()
-  }, [applyDisplayToView])
+  }, [showTabInView])
 
   const handleNew = useCallback(async () => {
     const freshSettings = await window.api.settings.load()
@@ -806,15 +797,11 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    if (view) {
-      view.setState(newTab.editorState)
-      const s = settingsRef.current
-      if (s) applyDisplayToView(view, s)
-    }
+    if (view) showTabInView(view, newTab)
     await window.api.dict.setActiveDicts(newTab.dictNames)
     closePopupRef.current()
     view?.focus()
-  }, [makeNewTab, applyDisplayToView])
+  }, [makeNewTab, showTabInView])
 
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
@@ -880,15 +867,11 @@ function App(): JSX.Element {
       return [...updated, newTab]
     })
     setActiveTabId(newTab.id)
-    if (view) {
-      view.setState(newTab.editorState)
-      const s = settingsRef.current
-      if (s) applyDisplayToView(view, s)
-    }
+    if (view) showTabInView(view, newTab)
     await window.api.dict.setActiveDicts([])
     closePopupRef.current()
     view?.focus()
-  }, [applyDisplayToView])
+  }, [showTabInView])
 
   // ── 辞書トグル（チェックボックスドロップダウンから呼ばれる）───────────────
 
@@ -947,7 +930,7 @@ function App(): JSX.Element {
           return [...updated, missingTab]
         })
         setActiveTabId(missingTab.id)
-        view?.setState(missingTab.editorState)
+        if (view) showTabInView(view, missingTab)
         await window.api.dict.setActiveDicts([])
         closePopupRef.current()
         view?.focus()
@@ -1216,10 +1199,7 @@ function App(): JSX.Element {
 
       setTabs(restoredTabs)
       setActiveTabId(activeTab.id)
-      view.setState(activeTab.editorState)
-      setStatusInfo(computeStatusInfo(activeTab.editorState, activeTab.sessionStartChars))
-      const s = settingsRef.current
-      if (s) applyDisplayToView(view, s)
+      showTabInView(view, activeTab)
       await window.api.dict.setActiveDicts(activeTab.dictNames)
       view.focus()
     })
