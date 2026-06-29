@@ -10,7 +10,7 @@ import * as iconv from 'iconv-lite'
 import { DictManager } from '../shared/dict/DictManager'
 import { searchMultiDicts } from '../shared/dict/engine'
 import type { AppSettings, AutosaveFileInfo } from '../shared/settings-types'
-import { DEFAULT_SETTINGS } from '../shared/settings-types'
+import { DEFAULT_SETTINGS, MAX_ACTIVE_DICTS } from '../shared/settings-types'
 
 // ── グローバル変数 ────────────────────────────────────────────────────────────
 
@@ -82,7 +82,14 @@ function loadSettings(): AppSettings {
         wordWrap: p.display?.wordWrap ?? DEFAULT_SETTINGS.display.wordWrap
       },
       dictPriorityOrder: Array.isArray(p.dictPriorityOrder) ? p.dictPriorityOrder : [],
-      defaultDictNames: Array.isArray(p.defaultDictNames) ? p.defaultDictNames : []
+      defaultDictNames: (() => {
+        const raw: string[] = Array.isArray(p.defaultDictNames) ? p.defaultDictNames : []
+        if (raw.length <= MAX_ACTIVE_DICTS) return raw
+        const order: string[] = Array.isArray(p.dictPriorityOrder) ? p.dictPriorityOrder : []
+        const inOrder = order.filter((n) => raw.includes(n))
+        const rest = raw.filter((n) => !order.includes(n))
+        return [...inOrder, ...rest].slice(0, MAX_ACTIVE_DICTS)
+      })()
     }
   } catch {
     return { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave }, display: { ...DEFAULT_SETTINGS.display } }
