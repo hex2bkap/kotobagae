@@ -28,6 +28,17 @@ interface Tab {
   dirty: boolean
   missing: boolean
   dictNames: string[]  // per-tab 有効辞書（グローバル優先度順）
+  sessionStartChars: number  // このタブを開いた時点の文字数（今回カウントの基点）
+}
+
+function computeStatusInfo(state: EditorState, sessionStartChars: number): StatusInfo {
+  const pos = state.selection.main.head
+  const line = state.doc.lineAt(pos)
+  const { from, to } = state.selection.main
+  const selText = from !== to ? state.doc.sliceString(from, to) : null
+  const charCount = state.doc.toString().replace(/\s/g, '').length
+  const sessionDelta = Math.max(0, charCount - sessionStartChars)
+  return { line: line.number, col: pos - line.from + 1, charCount, selText, sessionDelta }
 }
 
 interface CandidateWithSource {
@@ -248,7 +259,6 @@ function App(): JSX.Element {
   const [statusInfo, setStatusInfo] = useState<StatusInfo>({
     line: 1, col: 1, charCount: 0, selText: null, sessionDelta: 0
   })
-  const sessionStartCharsRef = useRef<number | null>(null)
 
   // callbacks / state への参照を extensions や非同期コールバックから安全に使うための ref 群
   const tabsRef = useRef<Tab[]>(tabs)
@@ -648,6 +658,7 @@ function App(): JSX.Element {
       id: newTabId(),
       filePath: null,
       editorState: EditorState.create({ doc: '', extensions: extensionsRef.current! }),
+      sessionStartChars: 0,
       dirty: false,
       missing: false,
       dictNames: sortByPriority(
@@ -666,7 +677,8 @@ function App(): JSX.Element {
     }),
     dirty: false,
     missing: true,
-    dictNames
+    dictNames,
+    sessionStartChars: 0
   }), [])
 
   const switchTab = useCallback(async (newId: string) => {
@@ -686,6 +698,7 @@ function App(): JSX.Element {
 
     setActiveTabId(newId)
     view.setState(newTab.editorState)
+    setStatusInfo(computeStatusInfo(newTab.editorState, newTab.sessionStartChars))
     const s = settingsRef.current
     if (s) applyDisplayToView(view, s)
     await window.api.dict.setActiveDicts(newTab.dictNames)
@@ -717,6 +730,7 @@ function App(): JSX.Element {
       const v0 = viewRef.current
       if (v0) {
         v0.setState(newTab.editorState)
+        setStatusInfo(computeStatusInfo(newTab.editorState, newTab.sessionStartChars))
         const s0 = settingsRef.current
         if (s0) applyDisplayToView(v0, s0)
       }
@@ -733,6 +747,7 @@ function App(): JSX.Element {
       const v1 = viewRef.current
       if (v1) {
         v1.setState(next.editorState)
+        setStatusInfo(computeStatusInfo(next.editorState, next.sessionStartChars))
         const s1 = settingsRef.current
         if (s1) applyDisplayToView(v1, s1)
       }
@@ -750,9 +765,11 @@ function App(): JSX.Element {
     dictNames: string[] = []
   ) => {
     const state = EditorState.create({ doc: content, extensions: extensionsRef.current! })
+    const sessionStartChars = content.replace(/\s/g, '').length
     const newTab: Tab = {
       id: newTabId(), filePath, editorState: state,
-      dirty: false, missing: false, dictNames
+      dirty: false, missing: false, dictNames,
+      sessionStartChars
     }
     const view = viewRef.current
     const currentId = activeTabIdRef.current
@@ -1029,25 +1046,9 @@ function App(): JSX.Element {
 
       // ステータスバー更新
       if (update.docChanged || update.selectionSet) {
-        const state = update.state
-        const pos = state.selection.main.head
-        const line = state.doc.lineAt(pos)
-        const { from, to } = state.selection.main
-        const selText = from !== to ? state.doc.sliceString(from, to) : null
-
-        // 文字数（空白・改行除く）
-        const text = state.doc.toString()
-        const charCount = text.replace(/\s/g, '').length
-
-        // セッション開始文字数の初期化（初回確定後）
-        if (sessionStartCharsRef.current === null && update.docChanged) {
-          sessionStartCharsRef.current = charCount
-        }
-        const sessionDelta = sessionStartCharsRef.current !== null
-          ? Math.max(0, charCount - sessionStartCharsRef.current)
-          : 0
-
-        setStatusInfo({ line: line.number, col: pos - line.from + 1, charCount, selText, sessionDelta })
+        const activeId = activeTabIdRef.current
+        const activeTab = tabsRef.current.find((t) => t.id === activeId)
+        setStatusInfo(computeStatusInfo(update.state, activeTab?.sessionStartChars ?? 0))
       }
     })
 
@@ -1152,7 +1153,8 @@ function App(): JSX.Element {
       editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
       dirty: false,
       missing: false,
-      dictNames: []
+      dictNames: [],
+      sessionStartChars: 0
     }
 
     const view = new EditorView({ state: initialTab.editorState, parent: editorRef.current })
@@ -1176,7 +1178,8 @@ function App(): JSX.Element {
           restoredTabs.push({
             id: newTabId(), filePath: null,
             editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
-            dirty: false, missing: false, dictNames
+            dirty: false, missing: false, dictNames,
+            sessionStartChars: 0
           })
         } else {
           const fileData = await window.api.openFilePath(st.filePath)
@@ -1188,7 +1191,8 @@ function App(): JSX.Element {
                 extensions: sharedExtensions,
                 selection: { anchor: Math.min(st.cursorPos, fileData.content.length) }
               }),
-              dirty: false, missing: false, dictNames
+              dirty: false, missing: false, dictNames,
+              sessionStartChars: fileData.content.replace(/\s/g, '').length
             })
           } else {
             restoredTabs.push({
@@ -1197,7 +1201,8 @@ function App(): JSX.Element {
                 doc: '',
                 extensions: [...sharedExtensions, EditorView.editable.of(false)]
               }),
-              dirty: false, missing: true, dictNames
+              dirty: false, missing: true, dictNames,
+              sessionStartChars: 0
             })
           }
         }
@@ -1211,6 +1216,7 @@ function App(): JSX.Element {
       setTabs(restoredTabs)
       setActiveTabId(activeTab.id)
       view.setState(activeTab.editorState)
+      setStatusInfo(computeStatusInfo(activeTab.editorState, activeTab.sessionStartChars))
       const s = settingsRef.current
       if (s) applyDisplayToView(view, s)
       await window.api.dict.setActiveDicts(activeTab.dictNames)
