@@ -17,10 +17,9 @@ import { AboutModal } from './components/AboutModal'
 import { TbIcon, ICONS } from './components/TbIcon'
 import { basename } from './utils/path'
 import type { AppSettings } from '../../shared/settings-types'
-import { DEFAULT_SETTINGS } from '../../shared/settings-types'
+import { DEFAULT_SETTINGS, MAX_ACTIVE_DICTS } from '../../shared/settings-types'
 
 const APP_NAME = 'コトバガエ'
-const MAX_ACTIVE_DICTS = 5
 
 interface Tab {
   id: string
@@ -654,7 +653,7 @@ function App(): JSX.Element {
       dictNames: sortByPriority(
         base.filter((n) => dictList.includes(n)),
         priorityOrderRef.current
-      )
+      ).slice(0, MAX_ACTIVE_DICTS)
     }
   }, [settings, dictList])
 
@@ -1168,9 +1167,10 @@ function App(): JSX.Element {
       const restoredTabs: Tab[] = []
       for (const st of session.tabs) {
         // M7移行: 旧セッション dictName(単一) → dictNames(配列) に変換
-        const dictNames: string[] = Array.isArray(st.dictNames)
+        const dictNames: string[] = (Array.isArray(st.dictNames)
           ? st.dictNames
           : st.dictName ? [st.dictName] : []
+        ).slice(0, MAX_ACTIVE_DICTS)
 
         if (!st.filePath) {
           restoredTabs.push({

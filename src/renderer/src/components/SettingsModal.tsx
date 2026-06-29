@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { AppSettings } from '../../../shared/settings-types'
-import { DEFAULT_SETTINGS } from '../../../shared/settings-types'
+import { DEFAULT_SETTINGS, MAX_ACTIVE_DICTS } from '../../../shared/settings-types'
 
 interface Props {
   dictList: string[]
@@ -238,20 +238,26 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
                 <p style={{ fontSize: 12, color: 'var(--kg-text-muted)' }}>辞書がありません</p>
               ) : (
                 <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--kg-border)', borderRadius: 4, padding: '4px 0' }}>
-                  {orderedDicts.map((name) => (
-                    <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', fontSize: 13, cursor: 'pointer', color: 'var(--kg-text-primary)' }}>
-                      <input
-                        type="checkbox"
-                        checked={settings.defaultDictNames.includes(name)}
-                        onChange={(e) => toggleDefaultDict(name, e.target.checked)}
-                      />
-                      {name}
-                    </label>
-                  ))}
+                  {orderedDicts.map((name) => {
+                    const isChecked = settings.defaultDictNames.includes(name)
+                    const atLimit = settings.defaultDictNames.length >= MAX_ACTIVE_DICTS
+                    const isDisabled = !isChecked && atLimit
+                    return (
+                      <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', fontSize: 13, cursor: isDisabled ? 'not-allowed' : 'pointer', color: 'var(--kg-text-primary)', opacity: isDisabled ? 0.5 : 1 }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isDisabled}
+                          onChange={(e) => toggleDefaultDict(name, e.target.checked)}
+                        />
+                        {name}
+                      </label>
+                    )
+                  })}
                 </div>
               )}
               <p style={{ fontSize: 11, color: 'var(--kg-text-muted)', margin: '6px 0 0' }}>
-                チェックした辞書が新規タブで自動的に有効になります。
+                チェックした辞書が新規タブで自動的に有効になります（最大{MAX_ACTIVE_DICTS}つ）。
               </p>
               <p style={{ fontSize: 11, color: 'var(--kg-text-muted)', margin: '3px 0 0' }}>
                 複数選んだ場合は、辞書管理の優先度順（上が高い）で表示されます。

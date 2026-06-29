@@ -1,3 +1,5 @@
+export const MAX_ACTIVE_DICTS = 5
+
 export interface AppSettings {
   windowBounds: { x: number; y: number; width: number; height: number } | null
   dictWindowBounds?: { x: number; y: number; width: number; height: number } | null
