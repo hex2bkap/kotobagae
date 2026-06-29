@@ -295,10 +295,13 @@ export function DictManagerApp(): JSX.Element {
   // テーマ同期：初回 + フォーカス時に最新テーマを適用
   useEffect(() => {
     const cleanup = window.api.dict.onFlushBeforeClose(async () => {
-      document.activeElement instanceof HTMLElement && document.activeElement.blur()
-      await new Promise<void>((r) => setTimeout(r, 0))
-      await saveChainRef.current
-      window.api.dict.flushDone()
+      try {
+        document.activeElement instanceof HTMLElement && document.activeElement.blur()
+        await new Promise<void>((r) => setTimeout(r, 0))
+        await saveChainRef.current
+      } finally {
+        window.api.dict.flushDone()
+      }
     })
     return cleanup
   }, [])
