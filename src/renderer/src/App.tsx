@@ -806,12 +806,13 @@ function App(): JSX.Element {
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
     if (!result) return
+    if ('error' in result) { showFlash('ファイルを開けませんでした。権限を確認してください'); return }
 
     const existing = tabsRef.current.find((t) => t.filePath === result.path)
     if (existing) { switchTab(existing.id); return }
 
     await openFileAsNewTab(result.path, result.content)
-  }, [switchTab, openFileAsNewTab])
+  }, [switchTab, openFileAsNewTab, showFlash])
 
   const handleSave = useCallback(async () => {
     const view = viewRef.current
@@ -822,13 +823,19 @@ function App(): JSX.Element {
     const content = view.state.doc.toString()
     if (!activeTab.filePath) {
       const result = await window.api.saveFileAs(content)
-      if (!result || !result.success) return
+      if (!result || !result.success) {
+        showFlash('保存に失敗しました。書き込み権限を確認してください')
+        return
+      }
       setTabs((prev) =>
         prev.map((t) => (t.id === activeId ? { ...t, filePath: result.path, dirty: false } : t))
       )
     } else {
       const result = await window.api.saveFile(activeTab.filePath, content)
-      if (!result.success) return
+      if (!result.success) {
+        showFlash('保存に失敗しました。書き込み権限を確認してください')
+        return
+      }
       setTabs((prev) => prev.map((t) => (t.id === activeId ? { ...t, dirty: false } : t)))
       showFlash('保存しました')
       if (saveFlashTimerRef.current) clearTimeout(saveFlashTimerRef.current)
@@ -844,7 +851,10 @@ function App(): JSX.Element {
     if (!view || !activeTab || activeTab.missing) return
 
     const result = await window.api.saveFileAs(view.state.doc.toString())
-    if (!result || !result.success) return
+    if (!result || !result.success) {
+      if (result && !result.success) showFlash('保存に失敗しました。書き込み権限を確認してください')
+      return
+    }
     setTabs((prev) =>
       prev.map((t) => (t.id === activeId ? { ...t, filePath: result.path, dirty: false } : t))
     )

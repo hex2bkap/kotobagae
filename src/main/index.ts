@@ -414,8 +414,12 @@ ipcMain.handle('file:open', async () => {
   })
   if (result.canceled || result.filePaths.length === 0) return null
   const filePath = result.filePaths[0]
-  const { content, encoding } = readFileWithEncoding(filePath)
-  return { path: filePath, content, encoding }
+  try {
+    const { content, encoding } = readFileWithEncoding(filePath)
+    return { path: filePath, content, encoding }
+  } catch {
+    return { error: true }
+  }
 })
 
 ipcMain.handle('file:openPath', (_event, filePath: string) => {

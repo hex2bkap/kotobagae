@@ -56,7 +56,7 @@ interface DictEntryInfo {
 }
 
 interface KotobagaeAPI {
-  openFile: () => Promise<{ path: string; content: string; encoding: string } | null>
+  openFile: () => Promise<{ path: string; content: string; encoding: string } | { error: true } | null>
   openFilePath: (filePath: string) => Promise<{ path: string; content: string; encoding: string } | null>
   saveFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>
   saveFileAs: (content: string) => Promise<{ path: string; success: boolean; error?: string } | null>

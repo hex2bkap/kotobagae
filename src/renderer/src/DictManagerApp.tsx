@@ -10,7 +10,7 @@ interface DictEntry {
 }
 
 type DictData = Record<string, DictEntry[]>
-type SaveStatus = 'saved' | 'saving'
+type SaveStatus = 'saved' | 'saving' | 'error'
 
 interface CtxMenuItem {
   label: string
@@ -239,8 +239,12 @@ export function DictManagerApp(): JSX.Element {
     setSaveStatus('saving')
     const p = fn().then(() => undefined)
     saveChainRef.current = p
-    await p
-    setTimeout(() => setSaveStatus('saved'), 700)
+    try {
+      await p
+      setTimeout(() => setSaveStatus('saved'), 700)
+    } catch {
+      setSaveStatus('error')
+    }
   }, [])
 
   const toggleDefaultDict = useCallback(async (name: string, checked: boolean) => {
@@ -911,9 +915,11 @@ export function DictManagerApp(): JSX.Element {
           onClick={handleExportTsv}
           title="TSV エクスポート（選択辞書対象）"
         >TSV エクスポート</button>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: saveStatus === 'saving' ? 'var(--kg-text-muted)' : 'var(--kg-text-secondary)' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: saveStatus === 'saving' ? 'var(--kg-text-muted)' : saveStatus === 'error' ? 'var(--kg-accent)' : 'var(--kg-text-secondary)' }}>
           {saveStatus === 'saving' ? (
             <span>保存中…</span>
+          ) : saveStatus === 'error' ? (
+            <span>保存に失敗しました</span>
           ) : (
             <>
               <span>✓</span>
