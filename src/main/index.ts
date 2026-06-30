@@ -489,8 +489,14 @@ ipcMain.handle('session:save', (_event, data: SessionData) => {
 ipcMain.handle('settings:load', () => currentSettings)
 
 ipcMain.handle('settings:save', (_event, s: AppSettings) => {
-  // windowBounds はメインが move/resize で管理する状態。モーダルの値で上書きしない
-  currentSettings = { ...s, windowBounds: currentSettings.windowBounds }
+  // main 権威フィールドは専用経路でしか正規変更されないため payload を無視して温存
+  // windowBounds: move/resize イベント / dictWindowBounds: 辞書窓 move/resize / dictPriorityOrder: dict:setPriorityOrder
+  currentSettings = {
+    ...s,
+    windowBounds: currentSettings.windowBounds,
+    dictWindowBounds: currentSettings.dictWindowBounds,
+    dictPriorityOrder: currentSettings.dictPriorityOrder
+  }
   saveSettings(currentSettings)
   buildMenu()  // 折り返し・太字・テーマ等のチェック状態をメニューに即反映
 })
