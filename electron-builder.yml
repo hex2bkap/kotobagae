@@ -1,0 +1,47 @@
+appId: com.hex2bkap.kotobagae
+productName: コトバガエ
+copyright: Copyright © 2026 hex2bkap
+
+publish: null
+
+asar: true
+
+directories:
+  output: dist
+
+files:
+  - out/**/*
+  - '!**/*.map'
+
+icon: build/icon.png
+
+fileAssociations:
+  - ext: txt
+    name: テキストファイル
+    role: Editor
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  artifactName: Kotobagae-Setup-${version}-${arch}.${ext}
+
+zip:
+  artifactName: Kotobagae-${version}-${arch}-portable.${ext}
+
+mac:
+  target:
+    - target: dmg
+  category: public.app-category.productivity
+  minimumSystemVersion: '11.0'
+  identity: null
