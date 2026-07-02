@@ -23,7 +23,7 @@ export function ConfirmModal({ message, onOk, onCancel }: Props): JSX.Element {
           onClick={onOk}
           style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)', border: 'none', borderRadius: 4 }}
         >
-          閉じる
+          OK
         </button>
       </div>
     </Modal>
