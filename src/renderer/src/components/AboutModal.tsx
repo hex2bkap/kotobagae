@@ -1,46 +1,77 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { Modal } from './Modal'
+
+// 公開前にURLを差し込む。空文字のままなら該当リンクは非表示になる
+const ABOUT_LINKS = {
+  readme: '',
+  donate: ''
+}
 
 interface Props {
   onClose: () => void
 }
 
 export function AboutModal({ onClose }: Props): JSX.Element {
+  const [version, setVersion] = useState<string>('...')
+
+  useEffect(() => {
+    window.api.getVersion().then(setVersion).catch(() => setVersion(''))
+  }, [])
+
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 'bold', color: 'var(--kg-accent)' }}>
-          コトバガエ
-        </h2>
-        <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--kg-text-muted)' }}>
-          バージョン 1.0.0
+    <Modal title="このアプリについて" onClose={onClose} width={340}>
+      <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 'bold', color: 'var(--kg-accent)' }}>
+        コトバガエ
+      </h2>
+      {version && (
+        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--kg-text-muted)' }}>
+          バージョン {version}
         </p>
-        <p style={{ margin: '16px 0 0', fontSize: 13, color: 'var(--kg-text-secondary)', lineHeight: 1.7 }}>
-          作品ごとに辞書を切り替えられる、<br />
-          日本語創作執筆向けテキストエディタ。
-        </p>
-        <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--kg-text-muted)' }}>
-          作者：hex2bkap
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-          <button onClick={onClose} style={closeButtonStyle}>閉じる</button>
+      )}
+
+      <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--kg-text-secondary)', lineHeight: 1.7 }}>
+        複数の辞書を重ねて使い、切り替えられる執筆用テキストエディタ。
+      </p>
+
+      <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--kg-text-muted)' }}>
+        作者：hex2bkap
+      </p>
+
+      <p style={{ margin: '0 0 0', fontSize: 11, color: 'var(--kg-text-muted)', lineHeight: 1.6 }}>
+        本ソフトは無償・無保証で提供されます。
+        {ABOUT_LINKS.readme ? (
+          <>
+            {'詳しい利用条件は'}
+            <a href={ABOUT_LINKS.readme} target="_blank" rel="noreferrer" style={linkStyle}>
+              README
+            </a>
+            {'をご覧ください。'}
+          </>
+        ) : (
+          '詳しい利用条件は README をご覧ください。'
+        )}
+      </p>
+
+      {ABOUT_LINKS.donate && (
+        <div style={{ marginTop: 20 }}>
+          <a href={ABOUT_LINKS.donate} target="_blank" rel="noreferrer" style={donateLinkStyle}>
+            開発を支援する
+          </a>
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   )
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 200,
-  background: 'rgba(0,0,0,0.35)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
+const linkStyle: React.CSSProperties = {
+  color: 'var(--kg-accent)',
+  textDecoration: 'none',
+  margin: '0 2px'
 }
-const modalStyle: React.CSSProperties = {
-  background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '28px 32px',
-  width: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-  color: 'var(--kg-text-primary)'
-}
-const closeButtonStyle: React.CSSProperties = {
-  padding: '6px 20px', fontSize: 13, cursor: 'pointer',
-  border: '1px solid var(--kg-border)', borderRadius: 4,
-  background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)'
+const donateLinkStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: 'var(--kg-text-muted)',
+  textDecoration: 'none',
+  borderBottom: '1px solid var(--kg-border)',
+  paddingBottom: 1
 }

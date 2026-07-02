@@ -85,6 +85,8 @@ const api = {
     return () => ipcRenderer.removeListener('app:openFile', handler)
   },
 
+  getVersion: () => ipcRenderer.invoke('app:getVersion') as Promise<string>,
+
   loadSession: () =>
     ipcRenderer.invoke('session:load') as Promise<{
       tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[]; dictName?: string | null }>

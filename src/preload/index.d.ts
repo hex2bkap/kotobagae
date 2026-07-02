@@ -73,6 +73,7 @@ interface KotobagaeAPI {
   onMenuDisplay: (cb: (action: string, value?: unknown) => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
+  getVersion: () => Promise<string>
   loadSession: () => Promise<{
     tabs: Array<{ filePath: string | null; cursorPos: number; dictNames: string[]; dictName?: string | null }>
     activeTabIndex: number

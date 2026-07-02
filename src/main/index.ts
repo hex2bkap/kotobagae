@@ -642,6 +642,9 @@ ipcMain.handle('dict:notifyListUpdated', () => {
   mainWindow?.webContents.send('dict:listUpdated')
 })
 
+// アプリバージョン
+ipcMain.handle('app:getVersion', () => app.getVersion())
+
 // 右クリックコンテキストメニュー
 ipcMain.on('contextmenu:show', (_event, hasSelection: boolean) => {
   const menu = Menu.buildFromTemplate([
@@ -661,13 +664,33 @@ ipcMain.on('contextmenu:show', (_event, hasSelection: boolean) => {
 
 // ── シングルインスタンス制御 ────────────────────────────────────────────────
 
+// packaged と dev でプロセス引数の先頭が異なるため共通ヘルパーで正規化する。
+// packaged: argv = ["app.exe", "file.txt", ...]  → slice(1)
+// dev:      argv = ["electron", ".", "file.txt", ...] → slice(2)
+function extractFilePathFromArgv(argv: string[]): string | undefined {
+  const args = app.isPackaged ? argv.slice(1) : argv.slice(2)
+  return args.find((a) => !a.startsWith('-') && existsSync(a) && statSync(a).isFile())
+}
+
+// macOS は open-file イベントで来る（whenReady 前に発火し得る）
+let pendingOpenFilePath: string | undefined
+
+app.on('open-file', (event, filePath) => {
+  event.preventDefault()
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('app:openFile', filePath)
+  } else {
+    pendingOpenFilePath = filePath
+  }
+})
+
 const gotLock = app.requestSingleInstanceLock()
 
 if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', (_event, argv) => {
-    const filePath = argv.slice(2).find((arg) => !arg.startsWith('-'))
+    const filePath = extractFilePathFromArgv(argv)
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
@@ -693,6 +716,16 @@ if (!gotLock) {
 
     buildMenu()
     createWindow()
+
+    // 初回起動でファイルが渡された場合はレンダラー準備後に開く
+    // （open-file で退避済みの pendingOpenFilePath を優先、なければ argv を確認）
+    const startupFile = pendingOpenFilePath ?? extractFilePathFromArgv(process.argv)
+    pendingOpenFilePath = undefined
+    if (startupFile && mainWindow) {
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send('app:openFile', startupFile)
+      })
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
