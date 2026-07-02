@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Modal } from './Modal'
 
 interface AutosaveFile {
   path: string
@@ -42,12 +43,7 @@ export function AutosaveRestoreModal({ onClose, onOpen }: Props): JSX.Element {
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 'bold' }}>
-          自動保存から復元
-        </h2>
-
+    <Modal title="自動保存から復元" onClose={onClose} width={560}>
         {files === null ? (
           <p style={{ color: 'var(--kg-text-secondary)', fontSize: 13 }}>読み込み中...</p>
         ) : files.length === 0 ? (
@@ -104,22 +100,10 @@ export function AutosaveRestoreModal({ onClose, onOpen }: Props): JSX.Element {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 200,
-  background: 'rgba(0,0,0,0.35)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
-}
-const modalStyle: React.CSSProperties = {
-  background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '24px 28px',
-  width: 560, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-  display: 'flex', flexDirection: 'column',
-  color: 'var(--kg-text-primary)'
-}
 const folderButtonStyle: React.CSSProperties = {
   padding: '6px 12px', fontSize: 12, cursor: 'pointer',
   border: '1px solid var(--kg-border)', borderRadius: 4,

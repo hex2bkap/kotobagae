@@ -1,3 +1,5 @@
+import { Modal } from './Modal'
+
 interface Props {
   message: string
   onOk: () => void
@@ -6,36 +8,24 @@ interface Props {
 
 export function ConfirmModal({ message, onOk, onCancel }: Props): JSX.Element {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200
-    }}>
-      <div style={{
-        background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '24px 28px',
-        minWidth: 280, boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
-        color: 'var(--kg-text-primary)'
-      }}>
-        <p style={{ margin: '0 0 20px', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-          {message}
-        </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button
-            onClick={onCancel}
-            style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', borderRadius: 4, border: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)' }}
-          >
-            キャンセル
-          </button>
-          <button
-            onClick={onOk}
-            style={{
-              padding: '6px 16px', fontSize: 13, cursor: 'pointer',
-              background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)', border: 'none', borderRadius: 4
-            }}
-          >
-            閉じる
-          </button>
-        </div>
+    <Modal title="確認" onClose={onCancel} width={320}>
+      <p style={{ margin: '0 0 20px', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: 'var(--kg-text-primary)' }}>
+        {message}
+      </p>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button
+          onClick={onCancel}
+          style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', borderRadius: 4, border: '1px solid var(--kg-border)', background: 'var(--kg-bg-secondary)', color: 'var(--kg-text-primary)' }}
+        >
+          キャンセル
+        </button>
+        <button
+          onClick={onOk}
+          style={{ padding: '6px 16px', fontSize: 13, cursor: 'pointer', background: 'var(--kg-accent)', color: 'var(--kg-bg-primary)', border: 'none', borderRadius: 4 }}
+        >
+          閉じる
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }

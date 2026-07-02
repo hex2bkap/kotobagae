@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Modal } from './Modal'
 
 export interface UnsavedTabInfo {
   id: string
@@ -45,11 +46,7 @@ export function MultiUnsavedModal({ tabs, autosaveEnabled, onResult }: Props): J
   }
 
   return (
-    <div style={overlayStyle} onClick={handleCancel}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 'bold', color: 'var(--kg-text-primary)' }}>
-          保存されていないファイルがあります
-        </h2>
+    <Modal title="未保存の変更" onClose={handleCancel} width={520}>
         <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--kg-text-secondary)' }}>
           保存するファイルを選んでください。チェックを外したファイルの変更は破棄されます。
         </p>
@@ -113,21 +110,10 @@ export function MultiUnsavedModal({ tabs, autosaveEnabled, onResult }: Props): J
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 300,
-  background: 'rgba(0,0,0,0.45)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
-}
-const modalStyle: React.CSSProperties = {
-  background: 'var(--kg-bg-primary)', borderRadius: 8, padding: '24px 28px',
-  width: 520, boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
-  display: 'flex', flexDirection: 'column'
-}
 const cancelBtnStyle: React.CSSProperties = {
   padding: '6px 16px', fontSize: 13, cursor: 'pointer',
   border: '1px solid var(--kg-border-strong)', borderRadius: 4,

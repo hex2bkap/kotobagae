@@ -4,6 +4,7 @@
 :root,
 [data-theme="light"] {
   --kg-titlebar-bg:   #F0F0EE;
+  --kg-titlebar-text: #1A1A1A;
   --kg-bg-secondary:  #F0F0EE;
   --kg-bg-primary:    #FAFAF8;
   --kg-bg-tertiary:   #E8E8E6;
@@ -28,6 +29,7 @@
 /* ダーク：温かみのある暗色 */
 [data-theme="dark"] {
   --kg-titlebar-bg:   #0E0C08;
+  --kg-titlebar-text: #DDD6C8;
   --kg-bg-secondary:  #1E1914;
   --kg-bg-primary:    #1C1814;
   --kg-bg-tertiary:   #2A2018;
@@ -78,6 +80,7 @@
 /* 墨夜：極暗・温暖 */
 [data-theme="sumi"] {
   --kg-titlebar-bg:   #080604;
+  --kg-titlebar-text: #D8D0C0;
   --kg-bg-secondary:  #181210;
   --kg-bg-primary:    #14100C;
   --kg-bg-tertiary:   #201810;
@@ -123,6 +126,11 @@ input[type="radio"] {
 /* レンジスライダー */
 input[type="range"] {
   accent-color: var(--kg-accent);
+}
+
+/* button はブラウザデフォルトで font-family を継承しないため明示する */
+button {
+  font-family: inherit;
 }
 
 /* テキスト入力・テキストエリア・select */
@@ -177,6 +185,18 @@ select:focus {
   color: var(--kg-editor-text);
 }
 
+/* ── エディタ背景クロスハッチ（和紙/墨夜のみ・薄い格子）──────────────── */
+[data-theme="washi"] .cm-editor {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(160,140,110,0.03) 0, rgba(160,140,110,0.03) 1px, transparent 1px, transparent 8px),
+    repeating-linear-gradient(-45deg, rgba(160,140,110,0.03) 0, rgba(160,140,110,0.03) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="sumi"] .cm-editor {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,240,200,0.013) 0, rgba(255,240,200,0.013) 1px, transparent 1px, transparent 8px),
+    repeating-linear-gradient(-45deg, rgba(255,240,200,0.013) 0, rgba(255,240,200,0.013) 1px, transparent 1px, transparent 8px);
+}
+
 /* ── ツールバーボタン ───────────────────────────────────────────────────── */
 .kg-tb-btn {
   background: transparent;
@@ -197,6 +217,11 @@ select:focus {
 }
 .kg-tb-btn:active {
   opacity: 0.7;
+}
+
+/* ── モーダル共通ヘッダ × ボタン ──────────────────────────────────────── */
+.modal-close-btn:hover {
+  background: rgba(128, 128, 128, 0.18);
 }
 
 /* ── 検索ハイライト ─────────────────────────────────────────────────────── */

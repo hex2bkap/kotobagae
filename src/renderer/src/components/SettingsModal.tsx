@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { AppSettings } from '../../../shared/settings-types'
 import { DEFAULT_SETTINGS, MAX_ACTIVE_DICTS } from '../../../shared/settings-types'
+import { Modal } from './Modal'
 
 interface Props {
   dictList: string[]
@@ -54,11 +55,9 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
 
   if (!settings) {
     return (
-      <div style={overlayStyle}>
-        <div style={modalStyle}>
-          <p style={{ color: 'var(--kg-text-muted)' }}>読み込み中...</p>
-        </div>
-      </div>
+      <Modal title="設定" onClose={onClose} width={480}>
+        <p style={{ color: 'var(--kg-text-muted)' }}>読み込み中...</p>
+      </Modal>
     )
   }
 
@@ -89,10 +88,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 'bold', color: 'var(--kg-text-primary)' }}>設定</h2>
-
+    <Modal title="設定" onClose={onClose} width={480}>
         {/* タブバー */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--kg-border-strong)', marginBottom: 16 }}>
           {([['display', '表示'], ['dict', '辞書・候補'], ['other', '自動保存・その他']] as [TabKey, string][]).map(([key, label]) => (
@@ -315,8 +311,7 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
           <button onClick={onClose} style={cancelButtonStyle}>キャンセル</button>
           <button onClick={handleSave} style={okButtonStyle}>保存</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -342,19 +337,6 @@ function CheckRow({ checked, onChange, label }: { checked: boolean; onChange: (v
 
 // ── スタイル ─────────────────────────────────────────────────────────────────
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 200,
-  background: 'rgba(0,0,0,0.4)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
-}
-const modalStyle: React.CSSProperties = {
-  background: 'var(--kg-bg-primary)',
-  border: '1px solid var(--kg-border-strong)',
-  borderRadius: 8, padding: '20px 24px',
-  width: 480, maxHeight: '85vh',
-  display: 'flex', flexDirection: 'column',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
-}
 const tabContentStyle: React.CSSProperties = {
   flex: 1, overflowY: 'auto', paddingRight: 4
 }
