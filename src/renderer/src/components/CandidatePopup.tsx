@@ -42,7 +42,6 @@ export function CandidatePopup({ candidates, selectedIndex, position, onSelect }
         maxHeight: '320px',
         overflowY: 'auto',
         minWidth: '120px',
-        fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif',
         fontSize: '15px',
         userSelect: 'none'
       }}
