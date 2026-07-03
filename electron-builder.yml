@@ -13,7 +13,7 @@ files:
   - out/**/*
   - '!**/*.map'
 
-icon: build/icon.png
+icon: build/icon.ico
 
 fileAssociations:
   - ext: txt
@@ -29,6 +29,8 @@ win:
       arch:
         - x64
 
+artifactName: Kotobagae-${version}-${arch}-portable.${ext}
+
 nsis:
   oneClick: false
   perMachine: false
@@ -36,10 +38,8 @@ nsis:
   deleteAppDataOnUninstall: false
   artifactName: Kotobagae-Setup-${version}-${arch}.${ext}
 
-zip:
-  artifactName: Kotobagae-${version}-${arch}-portable.${ext}
-
 mac:
+  icon: build/icon.png
   target:
     - target: dmg
   category: public.app-category.productivity
