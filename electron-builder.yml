@@ -42,6 +42,8 @@ mac:
   icon: build/icon.png
   target:
     - target: dmg
+      arch:
+        - universal
   category: public.app-category.productivity
   minimumSystemVersion: '11.0'
   identity: null
