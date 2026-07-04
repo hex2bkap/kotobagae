@@ -49,6 +49,3 @@ mac:
   category: public.app-category.productivity
   minimumSystemVersion: '11.0'
   identity: null
-  extendInfo:
-    CFBundleDisplayName: コトバガエ
-    CFBundleName: コトバガエ
