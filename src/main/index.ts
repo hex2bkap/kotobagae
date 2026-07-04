@@ -701,6 +701,9 @@ if (!gotLock) {
   app.whenReady().then(() => {
     // ① resolveDataDir（IPC前・最初に実行。session・dicts・settings の3つが必ずここを通る）
     dataDir = resolveDataDir()
+    // dataDir 確定後・buildMenu 前に表示名を設定（メニューバー左端のアプリ名を日本語化）
+    // userData は dataDir 変数経由のため app.setName の影響を受けない
+    app.setName('コトバガエ')
 
     // ② 設定読み込み（dataDir 確定後）
     currentSettings = loadSettings()

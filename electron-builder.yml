@@ -1,5 +1,5 @@
 appId: com.hex2bkap.kotobagae
-productName: コトバガエ
+productName: Kotobagae
 copyright: Copyright © 2026 hex2bkap
 
 publish: null
@@ -37,9 +37,11 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   artifactName: Kotobagae-Setup-${version}-${arch}.${ext}
+  shortcutName: コトバガエ
 
 mac:
   icon: build/icon.png
+  artifactName: Kotobagae-${version}-${arch}.${ext}
   target:
     - target: dmg
       arch:
@@ -47,3 +49,6 @@ mac:
   category: public.app-category.productivity
   minimumSystemVersion: '11.0'
   identity: null
+  extendInfo:
+    CFBundleDisplayName: コトバガエ
+    CFBundleName: コトバガエ
