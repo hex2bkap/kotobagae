@@ -253,7 +253,7 @@ function buildMenu(): void {
         },
         {
           label: 'フォントサイズを小さく',
-          accelerator: 'CmdOrCtrl+-',
+          accelerator: 'CmdOrCtrl+Minus',
           click: () => mainWindow?.webContents.send('menu:display', { action: 'fontSizeDown' })
         },
         { type: 'separator' },
