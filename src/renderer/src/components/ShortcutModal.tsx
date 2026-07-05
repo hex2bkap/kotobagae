@@ -12,8 +12,14 @@ const SHORTCUTS: { key: string; desc: string }[] = [
   { key: 'Ctrl+H',         desc: '検索・置換' },
   { key: 'Ctrl+G',         desc: '指定行へジャンプ' },
   { key: 'Ctrl+D',         desc: '選択テキストを辞書に登録' },
-  { key: 'Ctrl + +',       desc: 'フォントサイズを大きく' },
-  { key: 'Ctrl + -',       desc: 'フォントサイズを小さく' },
+  // フォントサイズはキーボードショートカット（Ctrl + +/−）が有効な環境でのみ表示。
+  // macOS ではショートカット未対応（表示メニュー・設定から変更）のため除外する。
+  ...(window.api.platform === 'darwin'
+    ? []
+    : [
+        { key: 'Ctrl + +',       desc: 'フォントサイズを大きく' },
+        { key: 'Ctrl + -',       desc: 'フォントサイズを小さく' },
+      ]),
   { key: 'Ctrl+,',         desc: '設定を開く' },
   { key: 'F11',            desc: '集中モード 切替' },
   { key: 'Enter',          desc: '変換候補を確定' },
