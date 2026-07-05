@@ -297,10 +297,10 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
             <div style={{ borderTop: '1px solid var(--kg-border)', marginTop: 12, paddingTop: 12 }}>
               <p style={sectionHeadStyle}>データ</p>
               <button onClick={() => window.api.openAutosaveDir()} style={linkButtonStyle}>
-                自動保存フォルダを開く →
+                自動保存フォルダを開く
               </button>
               <button onClick={() => window.api.openDataDir()} style={{ ...linkButtonStyle, marginLeft: 12 }}>
-                データフォルダを開く →
+                データフォルダを開く
               </button>
             </div>
           </div>

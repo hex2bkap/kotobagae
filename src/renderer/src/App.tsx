@@ -431,8 +431,10 @@ function App(): JSX.Element {
         setFocusMode((v) => !v)
         return
       }
-      // Ctrl++（= または +）/ Ctrl+-（- またはテンキー-）でフォントサイズ変更
-      if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+      // Cmd/Ctrl++（= または +）/ Cmd/Ctrl+- でフォントサイズ変更
+      // メニュー accelerator は Mac で '-' が発火しない既知の問題（F-2-7）があるため
+      // renderer keydown に一本化し、メニュー項目からは accelerator を外している。
+      if ((e.metaKey || e.ctrlKey) && !e.altKey) {
         if (e.key === '+' || e.key === '=') {
           e.preventDefault()
           setSettings((prev) => {

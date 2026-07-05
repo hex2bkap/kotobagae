@@ -249,12 +249,10 @@ function buildMenu(): void {
       submenu: [
         {
           label: 'フォントサイズを大きく',
-          accelerator: 'CmdOrCtrl+Plus',
           click: () => mainWindow?.webContents.send('menu:display', { action: 'fontSizeUp' })
         },
         {
           label: 'フォントサイズを小さく',
-          accelerator: 'CmdOrCtrl+Minus',
           click: () => mainWindow?.webContents.send('menu:display', { action: 'fontSizeDown' })
         },
         { type: 'separator' },
