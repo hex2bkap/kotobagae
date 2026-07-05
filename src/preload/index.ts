@@ -189,7 +189,9 @@ const api = {
       ipcRenderer.on('contextmenu:dictRegister', cb)
       return () => ipcRenderer.removeListener('contextmenu:dictRegister', cb)
     }
-  }
+  },
+
+  platform: process.platform
 }
 
 if (process.contextIsolated) {

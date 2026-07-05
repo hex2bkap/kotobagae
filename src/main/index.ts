@@ -92,7 +92,13 @@ function loadSettings(): AppSettings {
       })()
     }
   } catch {
-    return { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave }, display: { ...DEFAULT_SETTINGS.display } }
+    // 初回起動（設定ファイル無し）のみ OS 別の既定フォントを適用。既存ユーザーの保存値は上の通常パスで温存される。
+    const defaultFontFamily = process.platform === 'darwin' ? 'Hiragino Sans' : DEFAULT_SETTINGS.display.fontFamily
+    return {
+      ...DEFAULT_SETTINGS,
+      autosave: { ...DEFAULT_SETTINGS.autosave },
+      display: { ...DEFAULT_SETTINGS.display, fontFamily: defaultFontFamily }
+    }
   }
 }
 

@@ -122,6 +122,7 @@ interface KotobagaeAPI {
     show: (hasSelection: boolean) => void
     onDictRegister: (cb: () => void) => () => void
   }
+  platform: string
 }
 
 declare global {

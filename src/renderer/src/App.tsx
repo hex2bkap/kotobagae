@@ -183,8 +183,8 @@ function buildFontTheme(s: AppSettings | null): Extension {
   const disp = s?.display
   const size = `${disp?.fontSize ?? 16}px`
   const family = disp?.fontFamily
-    ? `"${disp.fontFamily}", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif`
-    : '"Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif'
+    ? `"${disp.fontFamily}", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif`
+    : '"Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif'
   const weight = disp?.boldText ? 'bold' : 'normal'
   return EditorView.theme({
     '&': { height: '100%', fontSize: size },
@@ -322,7 +322,6 @@ function App(): JSX.Element {
   useEffect(() => {
     const view = viewRef.current
     if (!view || !settings) return
-    console.log('[font effect] fontSize=', settings.display?.fontSize, 'theme=', settings.display?.theme)
     applyDisplayToView(view, settings)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])  // settings 全体を監視（個別フィールドでは初回ロード時の view未生成を検出できない）
@@ -330,11 +329,7 @@ function App(): JSX.Element {
   // ── メニュー「表示」からのコマンドを受け取る ─────────────────────────────
 
   useEffect(() => {
-    let callCount = 0
     const off = window.api.onMenuDisplay((action, value) => {
-      callCount++
-      const thisCall = callCount
-      console.log(`[onMenuDisplay] action=${action} value=${String(value)} callCount=${thisCall}`)
       setSettings((prev) => {
         if (!prev) return prev
         const d = { ...prev.display }
@@ -343,7 +338,6 @@ function App(): JSX.Element {
         if (action === 'wordWrap') d.wordWrap = value as boolean
         if (action === 'fontSizeUp') d.fontSize = Math.min(d.fontSize + 2, 40)
         if (action === 'fontSizeDown') d.fontSize = Math.max(d.fontSize - 2, 10)
-        console.log(`[onMenuDisplay] prev.fontSize=${prev.display?.fontSize} next.fontSize=${d.fontSize} callCount=${thisCall}`)
         const next = { ...prev, display: d }
         window.api.settings.save(next)
         return next

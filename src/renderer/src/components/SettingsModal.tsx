@@ -15,7 +15,7 @@ type TabKey = 'display' | 'dict' | 'other'
 const INTERVAL_OPTIONS = [1, 3, 5, 10, 15, 30]
 const MAX_AGE_OPTIONS = [1, 7, 14, 30, -1]   // -1 = 無期限（削除しない）
 const MAX_SEARCH_LEN_OPTIONS = [5, 10, 15, 20]
-const FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
+const WIN_FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
   { label: 'Yu Gothic UI（既定）', value: 'Yu Gothic UI' },
   { label: 'Meiryo', value: 'Meiryo' },
   { label: 'BIZ UDGothic', value: 'BIZ UDGothic' },
@@ -23,6 +23,11 @@ const FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
   { label: 'MS Gothic', value: 'MS Gothic' },
   { label: 'MS Mincho', value: 'MS Mincho' },
 ]
+const MAC_FONT_FAMILY_OPTIONS: { label: string; value: string }[] = [
+  { label: 'ヒラギノ角ゴシック（既定）', value: 'Hiragino Sans' },
+  { label: 'Noto Sans JP', value: 'Noto Sans JP' },
+]
+const FONT_FAMILY_OPTIONS = window.api.platform === 'darwin' ? MAC_FONT_FAMILY_OPTIONS : WIN_FONT_FAMILY_OPTIONS
 
 function sortByPriority(names: string[], order: string[]): string[] {
   return names.slice().sort((a, b) => {
