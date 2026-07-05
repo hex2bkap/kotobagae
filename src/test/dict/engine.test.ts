@@ -6,10 +6,10 @@ import { DictManager } from '../../shared/dict/DictManager'
 import type { Dict } from '../../shared/dict/types'
 
 const DICT: Dict = {
-  'ろ': [{ word: '廬山昇龍覇', memo: '', count: 0 }],
-  'ろざん': [
-    { word: '廬山天竜爆裂覇', memo: '', count: 0 },
-    { word: '廬山昇龍覇', memo: '', count: 0 },
+  'こ': [{ word: 'コトバガエ', memo: '', count: 0 }],
+  'こと': [
+    { word: 'kotobagae', memo: '', count: 0 },
+    { word: 'コトバガエ', memo: '', count: 0 },
   ],
   'てすと': [
     { word: 'テスト', memo: '', count: 0 },
@@ -20,14 +20,14 @@ const DICT: Dict = {
 
 describe('searchCandidates', () => {
   it('最長一致を返す', () => {
-    const result = searchCandidates('ろざん', DICT)
-    expect(result?.reading).toBe('ろざん')
-    expect(result?.candidates).toContain('廬山天竜爆裂覇')
+    const result = searchCandidates('こと', DICT)
+    expect(result?.reading).toBe('こと')
+    expect(result?.candidates).toContain('kotobagae')
   })
 
   it('長いキーがなければ短いキーにフォールバックする', () => {
-    const result = searchCandidates('てすとんろ', DICT)
-    expect(result?.reading).toBe('ろ')
+    const result = searchCandidates('てすとんこ', DICT)
+    expect(result?.reading).toBe('こ')
   })
 
   it('maxLen より長いテキストは末尾だけを対象にする', () => {
@@ -40,7 +40,7 @@ describe('searchCandidates', () => {
   })
 
   it('辞書が空の場合は null を返す', () => {
-    expect(searchCandidates('ろ', {})).toBeNull()
+    expect(searchCandidates('こ', {})).toBeNull()
   })
 
   it('テキストが空の場合は null を返す', () => {
@@ -53,8 +53,8 @@ describe('searchCandidates', () => {
   })
 
   it('カーソル直前の1文字にマッチする', () => {
-    const result = searchCandidates('なにもないろ', DICT)
-    expect(result?.reading).toBe('ろ')
+    const result = searchCandidates('なにもないこ', DICT)
+    expect(result?.reading).toBe('こ')
   })
 
   it('candidates は string[] で返る', () => {
@@ -65,9 +65,9 @@ describe('searchCandidates', () => {
 
 describe('mergeEntries', () => {
   it('重複なく追加する', () => {
-    const existing = [{ word: '廬山昇龍覇', memo: '', count: 0 }]
-    const result = mergeEntries(existing, ['廬山昇龍覇', '廬山天竜爆裂覇'])
-    expect(result.map((e) => e.word)).toEqual(['廬山昇龍覇', '廬山天竜爆裂覇'])
+    const existing = [{ word: 'コトバガエ', memo: '', count: 0 }]
+    const result = mergeEntries(existing, ['コトバガエ', 'kotobagae'])
+    expect(result.map((e) => e.word)).toEqual(['コトバガエ', 'kotobagae'])
   })
 
   it('既存エントリの memo/count を保持する', () => {

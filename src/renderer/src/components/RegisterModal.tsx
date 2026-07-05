@@ -67,7 +67,7 @@ export function RegisterModal({
         ref={readingRef}
         value={reading}
         onChange={(e) => setReading(e.target.value)}
-        placeholder="例: ろざん"
+        placeholder="例: ことば"
         style={{ ...inputStyle, marginBottom: 18 }}
         onKeyDown={(e) => {
           e.stopPropagation()
