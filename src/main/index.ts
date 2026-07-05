@@ -225,6 +225,7 @@ function buildMenu(): void {
         { label: '開く...', accelerator: 'CmdOrCtrl+O', click: () => mainWindow?.webContents.send('menu:open') },
         { label: '保存', accelerator: 'CmdOrCtrl+S', click: () => mainWindow?.webContents.send('menu:save') },
         { label: '別名で保存...', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow?.webContents.send('menu:saveAs') },
+        { label: 'タブを閉じる', accelerator: 'CmdOrCtrl+W', click: () => mainWindow?.webContents.send('menu:closeTab') },
         { type: 'separator' },
         { label: '自動保存から復元...', click: () => mainWindow?.webContents.send('menu:autosaveRestore') },
         { type: 'separator' },

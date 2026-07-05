@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync, unlinkSync, renameSync } from 'fs'
 import { join } from 'path'
+import log from 'electron-log/main'
 import type { Dict, DictEntry, DictFileV1, DictStore } from './types'
 import { mergeEntries } from './engine'
 
@@ -24,8 +25,9 @@ export class DictManager {
       const name = fname.slice(0, -5)
       const { dict, migrated } = this.loadFile(join(this.dir, fname))
       this.store[name] = dict
-      // 旧形式だった場合は即時アトミック保存（起動時につき一度だけ）
-      if (migrated) this.saveFile(name)
+      if (migrated) {
+        try { this.saveFile(name) } catch { /* already logged in saveFile */ }
+      }
     }
   }
 
@@ -56,8 +58,34 @@ export class DictManager {
       name,
       entries: this.store[name]
     }
-    writeFileSync(tmp, JSON.stringify(payload, null, 2), 'utf-8')
-    renameSync(tmp, path)
+    try {
+      writeFileSync(tmp, JSON.stringify(payload, null, 2), 'utf-8')
+      renameSync(tmp, path)
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException
+      log.error('[DictManager] saveFile failed', {
+        dictName: name,
+        path,
+        code: err.code,
+        errno: err.errno,
+        message: err.message
+      })
+      try { unlinkSync(tmp) } catch { /* ignore */ }
+      throw e
+    }
+  }
+
+  // 既存辞書への変更で「変更→保存失敗→ロールバック」を統一するヘルパー
+  private withSave<T>(name: string, mutate: () => T): T {
+    const snapshot: Dict = JSON.parse(JSON.stringify(this.store[name]))
+    const result = mutate()
+    try {
+      this.saveFile(name)
+      return result
+    } catch (e) {
+      this.store[name] = snapshot
+      throw e
+    }
   }
 
   // ── 辞書一覧・操作 ─────────────────────────────────────────
@@ -73,8 +101,13 @@ export class DictManager {
   createDict(name: string): boolean {
     if (name in this.store) return false
     this.store[name] = {}
-    this.saveFile(name)
-    return true
+    try {
+      this.saveFile(name)
+      return true
+    } catch (e) {
+      delete this.store[name]
+      throw e
+    }
   }
 
   deleteDict(name: string): void {
@@ -85,11 +118,18 @@ export class DictManager {
 
   renameDict(oldName: string, newName: string): boolean {
     if (!(oldName in this.store) || newName in this.store) return false
-    this.store[newName] = this.store[oldName]
+    const data = this.store[oldName]
+    this.store[newName] = data
     delete this.store[oldName]
-    this.saveFile(newName)
-    try { unlinkSync(join(this.dir, `${oldName}.json`)) } catch { /* 無視 */ }
-    return true
+    try {
+      this.saveFile(newName)
+      try { unlinkSync(join(this.dir, `${oldName}.json`)) } catch { /* 無視 */ }
+      return true
+    } catch (e) {
+      this.store[oldName] = data
+      delete this.store[newName]
+      throw e
+    }
   }
 
   copyDict(srcName: string, dstName: string): boolean {
@@ -97,8 +137,13 @@ export class DictManager {
     this.store[dstName] = Object.fromEntries(
       Object.entries(this.store[srcName]).map(([k, v]) => [k, v.map((e) => ({ ...e }))])
     )
-    this.saveFile(dstName)
-    return true
+    try {
+      this.saveFile(dstName)
+      return true
+    } catch (e) {
+      delete this.store[dstName]
+      throw e
+    }
   }
 
   // ── 使用頻度記録（バッチ保存） ────────────────────────────────
@@ -114,7 +159,9 @@ export class DictManager {
 
   flushDirty(): void {
     for (const name of this.dirty) {
-      if (name in this.store) this.saveFile(name)
+      if (name in this.store) {
+        try { this.saveFile(name) } catch { /* already logged in saveFile */ }
+      }
     }
     this.dirty.clear()
   }
@@ -129,15 +176,17 @@ export class DictManager {
 
   addEntry(dictName: string, reading: string, words: string[]): void {
     if (!(dictName in this.store)) return
-    const existing = this.store[dictName][reading] ?? []
-    this.store[dictName][reading] = mergeEntries(existing, words)
-    this.saveFile(dictName)
+    this.withSave(dictName, () => {
+      const existing = this.store[dictName][reading] ?? []
+      this.store[dictName][reading] = mergeEntries(existing, words)
+    })
   }
 
   removeEntry(dictName: string, reading: string): void {
     if (!(dictName in this.store)) return
-    delete this.store[dictName][reading]
-    this.saveFile(dictName)
+    this.withSave(dictName, () => {
+      delete this.store[dictName][reading]
+    })
   }
 
   updateEntry(
@@ -151,9 +200,10 @@ export class DictManager {
     if (patch.word !== undefined && patch.word !== entries[index].word) {
       if (entries.some((e, i) => i !== index && e.word === patch.word)) return false
     }
-    entries[index] = { ...entries[index], ...patch }
-    this.saveFile(dictName)
-    return true
+    return this.withSave(dictName, () => {
+      entries[index] = { ...entries[index], ...patch }
+      return true
+    })
   }
 
   removeCandidate(dictName: string, reading: string, index: number): void {
@@ -161,9 +211,10 @@ export class DictManager {
     if (!dict) return
     const entries = dict[reading]
     if (!entries || index < 0 || index >= entries.length) return
-    entries.splice(index, 1)
-    if (entries.length === 0) delete dict[reading]
-    this.saveFile(dictName)
+    this.withSave(dictName, () => {
+      entries.splice(index, 1)
+      if (entries.length === 0) delete dict[reading]
+    })
   }
 
   addCandidate(dictName: string, reading: string, word: string): boolean {
@@ -171,25 +222,28 @@ export class DictManager {
     if (!this.store[dictName][reading]) this.store[dictName][reading] = []
     const existing = this.store[dictName][reading]
     if (existing.some((e) => e.word === word)) return false
-    existing.push({ word, memo: '', count: 0 })
-    this.saveFile(dictName)
-    return true
+    return this.withSave(dictName, () => {
+      existing.push({ word, memo: '', count: 0 })
+      return true
+    })
   }
 
   renameReading(dictName: string, oldReading: string, newReading: string): boolean {
     const dict = this.store[dictName]
     if (!dict || !(oldReading in dict) || newReading in dict) return false
-    dict[newReading] = dict[oldReading]
-    delete dict[oldReading]
-    this.saveFile(dictName)
-    return true
+    return this.withSave(dictName, () => {
+      dict[newReading] = dict[oldReading]
+      delete dict[oldReading]
+      return true
+    })
   }
 
   removeReading(dictName: string, reading: string): void {
     const dict = this.store[dictName]
     if (!dict || !(reading in dict)) return
-    delete dict[reading]
-    this.saveFile(dictName)
+    this.withSave(dictName, () => {
+      delete dict[reading]
+    })
   }
 
   // ── TSV エクスポート ────────────────────────────────────────
@@ -210,9 +264,11 @@ export class DictManager {
   // ── TSV インポート ──────────────────────────────────────────
 
   importTsv(tsvPath: string, dictName: string): number {
-    if (!(dictName in this.store)) {
+    const wasNew = !(dictName in this.store)
+    if (wasNew) {
       this.store[dictName] = {}
     }
+    const snapshot: Dict = JSON.parse(JSON.stringify(this.store[dictName]))
     const raw = readFileSync(tsvPath)
     let text: string
     try {
@@ -237,7 +293,18 @@ export class DictManager {
         count++
       }
     }
-    if (count > 0) this.saveFile(dictName)
+    if (count > 0) {
+      try {
+        this.saveFile(dictName)
+      } catch (e) {
+        if (wasNew) {
+          delete this.store[dictName]
+        } else {
+          this.store[dictName] = snapshot
+        }
+        throw e
+      }
+    }
     return count
   }
 }

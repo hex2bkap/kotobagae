@@ -915,8 +915,12 @@ function App(): JSX.Element {
     const off6 = window.api.onMenuAutosaveRestore(() => setShowAutosaveRestore(true))
     const off7 = window.api.onMenuShortcuts(() => setShowShortcuts(true))
     const off8 = window.api.onMenuAbout(() => setShowAbout(true))
-    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8() }
-  }, [handleNew, handleOpen, handleSave, handleSaveAs])
+    const off9 = window.api.onMenuCloseTab(() => {
+      const id = activeTabIdRef.current
+      if (id) closeTab(id)
+    })
+    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8(); off9() }
+  }, [handleNew, handleOpen, handleSave, handleSaveAs, closeTab])
 
   // ── 2重起動でファイルを受け取る ───────────────────────────────────────
 

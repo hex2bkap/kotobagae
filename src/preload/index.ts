@@ -48,6 +48,10 @@ const api = {
     ipcRenderer.on('menu:saveAs', cb)
     return () => ipcRenderer.removeListener('menu:saveAs', cb)
   },
+  onMenuCloseTab: (cb: () => void) => {
+    ipcRenderer.on('menu:closeTab', cb)
+    return () => ipcRenderer.removeListener('menu:closeTab', cb)
+  },
   onMenuSettings: (cb: () => void) => {
     ipcRenderer.on('menu:settings', cb)
     return () => ipcRenderer.removeListener('menu:settings', cb)

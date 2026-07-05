@@ -5,6 +5,7 @@ const SHORTCUTS: { key: string; desc: string }[] = [
   { key: 'Ctrl+O',         desc: 'ファイルを開く' },
   { key: 'Ctrl+S',         desc: '上書き保存' },
   { key: 'Ctrl+Shift+S',   desc: '別名で保存' },
+  { key: 'Ctrl+W',         desc: 'タブを閉じる' },
   { key: 'Ctrl+Z',         desc: '元に戻す' },
   { key: 'Ctrl+Y',         desc: 'やり直し' },
   { key: 'Ctrl+F',         desc: '検索' },

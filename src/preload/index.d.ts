@@ -66,6 +66,7 @@ interface KotobagaeAPI {
   onMenuOpen: (cb: () => void) => () => void
   onMenuSave: (cb: () => void) => () => void
   onMenuSaveAs: (cb: () => void) => () => void
+  onMenuCloseTab: (cb: () => void) => () => void
   onMenuSettings: (cb: () => void) => () => void
   onMenuAutosaveRestore: (cb: () => void) => () => void
   onMenuShortcuts: (cb: () => void) => () => void
