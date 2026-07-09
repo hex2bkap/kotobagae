@@ -274,7 +274,7 @@ function App(): JSX.Element {
   const overlayOpenRef = useRef(false)
   overlayOpenRef.current = !!(
     popup || modal || confirm || showSettings || showAutosaveRestore ||
-    registerState || showSearch || multiUnsaved || showShortcuts || showAbout
+    registerState || multiUnsaved || showShortcuts || showAbout
   )
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
