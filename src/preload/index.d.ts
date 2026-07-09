@@ -62,6 +62,7 @@ interface KotobagaeAPI {
   saveFileAs: (content: string) => Promise<{ path: string; success: boolean; error?: string } | null>
   setTitle: (title: string) => void
   confirmClose: () => void
+  syncFocusMode: (value: boolean) => void
   onMenuNew: (cb: () => void) => () => void
   onMenuOpen: (cb: () => void) => () => void
   onMenuSave: (cb: () => void) => () => void
@@ -72,6 +73,7 @@ interface KotobagaeAPI {
   onMenuShortcuts: (cb: () => void) => () => void
   onMenuAbout: (cb: () => void) => () => void
   onMenuDisplay: (cb: (action: string, value?: unknown) => void) => () => void
+  onMenuToggleFocusMode: (cb: () => void) => () => void
   onBeforeClose: (cb: () => void) => () => void
   onAppOpenFile: (cb: (filePath: string) => void) => () => void
   getVersion: () => Promise<string>

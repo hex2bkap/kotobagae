@@ -264,9 +264,18 @@ function App(): JSX.Element {
   const tabsRef = useRef<Tab[]>(tabs)
   const activeTabIdRef = useRef<string | null>(activeTabId)
   const popupRef = useRef<PopupState | null>(popup)
+  const focusModeRef = useRef(focusMode)
   tabsRef.current = tabs
   activeTabIdRef.current = activeTabId
   popupRef.current = popup
+  focusModeRef.current = focusMode
+
+  // Esc で集中モードを抜ける際、モーダル/検索が開いていたら誤発火させない安全ガード
+  const overlayOpenRef = useRef(false)
+  overlayOpenRef.current = !!(
+    popup || modal || confirm || showSettings || showAutosaveRestore ||
+    registerState || showSearch || multiUnsaved || showShortcuts || showAbout
+  )
 
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const activeDictNames = activeTab?.dictNames ?? []
@@ -425,6 +434,15 @@ function App(): JSX.Element {
         setFocusMode((v) => !v)
         return
       }
+      // Esc で集中モードを抜ける（Mac は F11 が Show Desktop と衝突し脱出不能になるための主救済）
+      // モーダル/検索が開いている時は誤発火させない（それぞれの Esc 挙動を優先）
+      if (e.key === 'Escape') {
+        if (focusModeRef.current && !overlayOpenRef.current) {
+          e.preventDefault()
+          setFocusMode(false)
+        }
+        return
+      }
       // Cmd/Ctrl++（= または +）/ Cmd/Ctrl+- でフォントサイズ変更
       // メニュー accelerator は Mac で '-' が発火しない既知の問題（F-2-7）があるため
       // renderer keydown に一本化し、メニュー項目からは accelerator を外している。
@@ -457,6 +475,11 @@ function App(): JSX.Element {
     if (!focusMode) {
       setTimeout(() => viewRef.current?.focus(), 0)
     }
+  }, [focusMode])
+
+  // 集中モードの状態を main へ同期（「表示」メニューのチェック状態に反映）
+  useEffect(() => {
+    window.api.syncFocusMode(focusMode)
   }, [focusMode])
 
   // ── モーダルヘルパー ──────────────────────────────────────────────────
@@ -915,7 +938,8 @@ function App(): JSX.Element {
       const id = activeTabIdRef.current
       if (id) closeTab(id)
     })
-    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8(); off9() }
+    const off10 = window.api.onMenuToggleFocusMode(() => setFocusMode((v) => !v))
+    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8(); off9(); off10() }
   }, [handleNew, handleOpen, handleSave, handleSaveAs, closeTab])
 
   // ── 2重起動でファイルを受け取る ───────────────────────────────────────
@@ -1362,7 +1386,7 @@ function App(): JSX.Element {
             position: 'absolute', bottom: 8, right: 12,
             fontSize: 11, color: 'var(--kg-text-muted)', pointerEvents: 'none'
           }}>
-            F11 で集中モード終了
+            Esc で終了
           </div>
         )}
 

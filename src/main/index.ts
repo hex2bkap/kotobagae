@@ -21,6 +21,10 @@ let activeDictNames: string[] = []
 let dataDir = ''
 let currentSettings: AppSettings = { ...DEFAULT_SETTINGS, autosave: { ...DEFAULT_SETTINGS.autosave } }
 let saveBoundsTimer: NodeJS.Timeout | null = null
+let focusModeState = false
+// Cmd+Q・メニュー「終了」は before-quit を経由するため、それを目印に区別する
+// （×ボタンでの close は before-quit を経ない＝Mac はウィンドウのみ破棄しアプリは残す）
+let isQuitting = false
 
 // ── 型定義 ────────────────────────────────────────────────────────────────────
 
@@ -274,6 +278,12 @@ function buildMenu(): void {
           checked: currentSettings.display.wordWrap,
           click: (item) => mainWindow?.webContents.send('menu:display', { action: 'wordWrap', value: item.checked })
         },
+        {
+          label: '集中モード',
+          type: 'checkbox',
+          checked: focusModeState,
+          click: () => mainWindow?.webContents.send('menu:toggleFocusMode')
+        },
         { type: 'separator' },
         {
           label: 'テーマ',
@@ -469,8 +479,16 @@ ipcMain.handle('file:saveAs', async (_event, content: string) => {
 })
 
 ipcMain.on('window:setTitle', (_event, title: string) => { mainWindow?.setTitle(title) })
-ipcMain.on('window:confirmClose', () => { mainWindow?.destroy() })
+ipcMain.on('window:confirmClose', () => {
+  mainWindow?.destroy()
+  if (isQuitting) app.quit()
+})
 ipcMain.on('dict:flush-done', () => { dictWindow?.destroy() })
+
+ipcMain.on('focusMode:sync', (_event, value: boolean) => {
+  focusModeState = !!value
+  buildMenu()
+})
 
 // セッション
 
@@ -688,6 +706,8 @@ app.on('open-file', (event, filePath) => {
     pendingOpenFilePath = filePath
   }
 })
+
+app.on('before-quit', () => { isQuitting = true })
 
 const gotLock = app.requestSingleInstanceLock()
 

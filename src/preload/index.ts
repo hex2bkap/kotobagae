@@ -31,6 +31,7 @@ const api = {
 
   setTitle: (title: string) => ipcRenderer.send('window:setTitle', title),
   confirmClose: () => ipcRenderer.send('window:confirmClose'),
+  syncFocusMode: (value: boolean) => ipcRenderer.send('focusMode:sync', value),
 
   onMenuNew: (cb: () => void) => {
     ipcRenderer.on('menu:new', cb)
@@ -76,6 +77,11 @@ const api = {
       cb(payload.action, payload.value)
     ipcRenderer.on('menu:display', handler)
     return () => ipcRenderer.removeListener('menu:display', handler)
+  },
+
+  onMenuToggleFocusMode: (cb: () => void) => {
+    ipcRenderer.on('menu:toggleFocusMode', cb)
+    return () => ipcRenderer.removeListener('menu:toggleFocusMode', cb)
   },
 
   onBeforeClose: (cb: () => void) => {
