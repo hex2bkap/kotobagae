@@ -191,10 +191,14 @@ export function SettingsModal({ dictList, priorityOrder, onClose, onSave }: Prop
               <div style={{ ...rowStyle, opacity: settings.display.showWritingStats ? 1 : 0.4 }}>
                 <label style={{ fontSize: 13, color: 'var(--kg-text-primary)' }}>文字数目標</label>
                 <input
-                  type="number" min={0}
-                  value={settings.display.wordGoal}
+                  type="text" inputMode="numeric"
+                  value={settings.display.wordGoal === 0 ? '' : String(settings.display.wordGoal)}
                   disabled={!settings.display.showWritingStats}
-                  onChange={(e) => setDisplay({ wordGoal: Math.max(0, Number(e.target.value)) })}
+                  onChange={(e) => {
+                    const half = e.target.value.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                    const digits = half.replace(/\D/g, '')
+                    setDisplay({ wordGoal: digits === '' ? 0 : Math.max(0, Number(digits)) })
+                  }}
                   style={{ ...selectStyle, width: 90 }}
                 />
                 <span style={unitStyle}>字（0 = 無効）</span>

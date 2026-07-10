@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react'
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { EditorState, Extension, Prec, Compartment } from '@codemirror/state'
-import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
+import { defaultKeymap, historyKeymap, history, indentWithTab, insertNewline } from '@codemirror/commands'
 import { search } from '@codemirror/search'
 import { CandidatePopup } from './components/CandidatePopup'
 import { InputModal } from './components/InputModal'
@@ -1153,6 +1153,7 @@ function App(): JSX.Element {
       highlightActiveLine(),
       searchKeymap,
       popupKeymap,
+      keymap.of([{ key: 'Enter', run: insertNewline }]),
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       // @codemirror/search: ハイライト機構のみ使用。パネルUIはカスタムReactパネルで代替
       search({ createPanel: () => ({ dom: document.createElement('div') }) }),
