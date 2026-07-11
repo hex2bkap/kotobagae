@@ -270,6 +270,11 @@ function App(): JSX.Element {
   popupRef.current = popup
   focusModeRef.current = focusMode
 
+  // 起動ファイルのオープンとセッション復元の競合対策（案A）：
+  // 復元が完了するまで起動ファイル open を保留し、完了後に非破壊 append する。
+  const sessionRestoredRef = useRef(false)
+  const pendingOpenPathsRef = useRef<string[]>([])
+
   // Esc で集中モードを抜ける際、モーダル/検索が開いていたら誤発火させない安全ガード
   const overlayOpenRef = useRef(false)
   overlayOpenRef.current = !!(
@@ -942,35 +947,55 @@ function App(): JSX.Element {
     return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); off8(); off9(); off10() }
   }, [handleNew, handleOpen, handleSave, handleSaveAs, closeTab])
 
-  // ── 2重起動でファイルを受け取る ───────────────────────────────────────
+  // ── 起動ファイル／2重起動でファイルを1つタブとして開く ────────────────
+  // 既存タブなら switch、無ければ open、読めなければ missing タブ。
+  // knownTabs は「まだ tabsRef に反映されていない復元タブ」を重複判定に含めるための追加集合
+  // （復元直後の flush では setTabs 直後で tabsRef が未更新なため）。
+  const openIncomingFilePath = useCallback(async (filePath: string, knownTabs: Tab[] = []) => {
+    const existing =
+      tabsRef.current.find((t) => t.filePath === filePath) ??
+      knownTabs.find((t) => t.filePath === filePath)
+    if (existing) { switchTab(existing.id); return }
+
+    const fileData = await window.api.openFilePath(filePath)
+    if (fileData) {
+      await openFileAsNewTab(filePath, fileData.content)
+    } else {
+      const missingTab = makeMissingTab(filePath, [])
+      const view = viewRef.current
+      const currentId = activeTabIdRef.current
+      const currentState = view?.state
+      setTabs((prev) => {
+        const updated = currentState && currentId
+          ? prev.map((t) => (t.id === currentId ? { ...t, editorState: currentState } : t))
+          : prev
+        return [...updated, missingTab]
+      })
+      setActiveTabId(missingTab.id)
+      if (view) showTabInView(view, missingTab)
+      await window.api.dict.setActiveDicts([])
+      closePopupRef.current()
+      view?.focus()
+    }
+  }, [switchTab, openFileAsNewTab, makeMissingTab, showTabInView])
+
+  // 非同期（復元 effect）から最新参照するための ref
+  const openIncomingFilePathRef = useRef(openIncomingFilePath)
+  openIncomingFilePathRef.current = openIncomingFilePath
+
+  // ── 起動ファイル／2重起動でファイルを受け取る ───────────────────────────
 
   useEffect(() => {
-    return window.api.onAppOpenFile(async (filePath: string) => {
-      const existing = tabsRef.current.find((t) => t.filePath === filePath)
-      if (existing) { switchTab(existing.id); return }
-
-      const fileData = await window.api.openFilePath(filePath)
-      if (fileData) {
-        await openFileAsNewTab(filePath, fileData.content)
-      } else {
-        const missingTab = makeMissingTab(filePath, [])
-        const view = viewRef.current
-        const currentId = activeTabIdRef.current
-        const currentState = view?.state
-        setTabs((prev) => {
-          const updated = currentState && currentId
-            ? prev.map((t) => (t.id === currentId ? { ...t, editorState: currentState } : t))
-            : prev
-          return [...updated, missingTab]
-        })
-        setActiveTabId(missingTab.id)
-        if (view) showTabInView(view, missingTab)
-        await window.api.dict.setActiveDicts([])
-        closePopupRef.current()
-        view?.focus()
+    return window.api.onAppOpenFile((filePath: string) => {
+      // セッション復元が終わるまでは open せずキューへ退避（復元の全置換で潰されるのを防ぐ）。
+      // 復元完了後は finishRestore が非破壊 append で開く。起動中(second-instance)は復元済み＝即 open。
+      if (!sessionRestoredRef.current) {
+        pendingOpenPathsRef.current.push(filePath)
+        return
       }
+      openIncomingFilePath(filePath)
     })
-  }, [switchTab, openFileAsNewTab, makeMissingTab])
+  }, [openIncomingFilePath])
 
   // ── ウィンドウを閉じる前にセッション保存 ─────────────────────────────
 
@@ -1181,63 +1206,86 @@ function App(): JSX.Element {
     setTabs([initialTab])
     setActiveTabId(initialTab.id)
 
-    // セッション復元
-    window.api.loadSession().then(async (session) => {
-      if (!session || session.tabs.length === 0) { view.focus(); return }
+    // 復元の全終了経路で呼ぶ：復元完了フラグを立て、保留中の起動ファイルを非破壊 append で開く。
+    // knownTabs（復元タブ）にも重複判定を掛ける（setTabs 直後は tabsRef が未更新のため）。
+    const finishRestore = async (knownTabs: Tab[]): Promise<void> => {
+      sessionRestoredRef.current = true
+      const pending = pendingOpenPathsRef.current
+      pendingOpenPathsRef.current = []
+      for (const p of pending) {
+        await openIncomingFilePathRef.current(p, knownTabs)
+      }
+    }
 
-      const restoredTabs: Tab[] = []
-      for (const st of session.tabs) {
-        // M7移行: 旧セッション dictName(単一) → dictNames(配列) に変換
-        const dictNames: string[] = (Array.isArray(st.dictNames)
-          ? st.dictNames
-          : st.dictName ? [st.dictName] : []
-        ).slice(0, MAX_ACTIVE_DICTS)
+    // セッション復元（案A：完了まで起動ファイル open を保留 → 完了後に非破壊 append）。
+    // try/finally で「全ての終了経路」（早期 return(a)(b)／正常(c)／loadSession reject(d)）を
+    // 必ず finishRestore に通す。1経路でも漏らすと、そのケースで保留した起動ファイルが永久に開かれない。
+    let restoredForFlush: Tab[] = []
+    ;(async () => {
+      try {
+        const session = await window.api.loadSession()
+        if (!session || session.tabs.length === 0) { view.focus(); return }
 
-        if (!st.filePath) {
-          restoredTabs.push({
-            id: newTabId(), filePath: null,
-            editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
-            dirty: false, missing: false, dictNames,
-            sessionStartChars: 0
-          })
-        } else {
-          const fileData = await window.api.openFilePath(st.filePath)
-          if (fileData) {
+        const restoredTabs: Tab[] = []
+        for (const st of session.tabs) {
+          // M7移行: 旧セッション dictName(単一) → dictNames(配列) に変換
+          const dictNames: string[] = (Array.isArray(st.dictNames)
+            ? st.dictNames
+            : st.dictName ? [st.dictName] : []
+          ).slice(0, MAX_ACTIVE_DICTS)
+
+          if (!st.filePath) {
             restoredTabs.push({
-              id: newTabId(), filePath: st.filePath,
-              editorState: EditorState.create({
-                doc: fileData.content,
-                extensions: sharedExtensions,
-                selection: { anchor: Math.min(st.cursorPos, fileData.content.length) }
-              }),
+              id: newTabId(), filePath: null,
+              editorState: EditorState.create({ doc: '', extensions: sharedExtensions }),
               dirty: false, missing: false, dictNames,
-              sessionStartChars: fileData.content.replace(/\s/g, '').length
-            })
-          } else {
-            restoredTabs.push({
-              id: newTabId(), filePath: st.filePath,
-              editorState: EditorState.create({
-                doc: '',
-                extensions: [...sharedExtensions, EditorView.editable.of(false)]
-              }),
-              dirty: false, missing: true, dictNames,
               sessionStartChars: 0
             })
+          } else {
+            const fileData = await window.api.openFilePath(st.filePath)
+            if (fileData) {
+              restoredTabs.push({
+                id: newTabId(), filePath: st.filePath,
+                editorState: EditorState.create({
+                  doc: fileData.content,
+                  extensions: sharedExtensions,
+                  selection: { anchor: Math.min(st.cursorPos, fileData.content.length) }
+                }),
+                dirty: false, missing: false, dictNames,
+                sessionStartChars: fileData.content.replace(/\s/g, '').length
+              })
+            } else {
+              restoredTabs.push({
+                id: newTabId(), filePath: st.filePath,
+                editorState: EditorState.create({
+                  doc: '',
+                  extensions: [...sharedExtensions, EditorView.editable.of(false)]
+                }),
+                dirty: false, missing: true, dictNames,
+                sessionStartChars: 0
+              })
+            }
           }
         }
+
+        if (restoredTabs.length === 0) { view.focus(); return }
+        // 復元タブが確定したので、flush 時の重複判定に使えるよう控えておく
+        restoredForFlush = restoredTabs
+
+        const activeIdx = Math.min(session.activeTabIndex, restoredTabs.length - 1)
+        const activeTab = restoredTabs[activeIdx]
+
+        setTabs(restoredTabs)
+        setActiveTabId(activeTab.id)
+        showTabInView(view, activeTab)
+        await window.api.dict.setActiveDicts(activeTab.dictNames)
+        view.focus()
+      } finally {
+        // ★全終了経路で必ず通る。finishRestore は setTabs の後に走るため、
+        // flush の append は復元タブの後ろに正しく積まれる。
+        await finishRestore(restoredForFlush)
       }
-
-      if (restoredTabs.length === 0) { view.focus(); return }
-
-      const activeIdx = Math.min(session.activeTabIndex, restoredTabs.length - 1)
-      const activeTab = restoredTabs[activeIdx]
-
-      setTabs(restoredTabs)
-      setActiveTabId(activeTab.id)
-      showTabInView(view, activeTab)
-      await window.api.dict.setActiveDicts(activeTab.dictNames)
-      view.focus()
-    })
+    })()
 
     return () => view.destroy()
   }, [])
