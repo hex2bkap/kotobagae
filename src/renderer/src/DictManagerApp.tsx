@@ -209,6 +209,8 @@ export function DictManagerApp(): JSX.Element {
 
   // 共通
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  // 取り込み/書き出しの結果など、可変テキストの一時通知（数秒で自動消滅）
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
   const [showCount, setShowCount] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
   const [confirmState, setConfirmState] = useState<{
@@ -223,6 +225,7 @@ export function DictManagerApp(): JSX.Element {
   const addCandRef = useRef<HTMLInputElement>(null)
   const addCandidateRef = useRef<HTMLInputElement>(null)
   const saveChainRef = useRef<Promise<void>>(Promise.resolve())
+  const noticeTimer = useRef<NodeJS.Timeout | null>(null)
 
   // ── ヘルパー ──────────────────────────────────────────────────────────────
 
@@ -234,6 +237,13 @@ export function DictManagerApp(): JSX.Element {
         onCancel: () => { setConfirmState(null); resolve(false) }
       })
     }), [])
+
+  // 一時通知を表示（数秒後に自動で消える）。error=true で警告色。
+  const showNotice = useCallback((text: string, error = false) => {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    setNotice({ text, error })
+    noticeTimer.current = setTimeout(() => setNotice(null), 4000)
+  }, [])
 
   const withSave = useCallback(async (fn: () => Promise<unknown>): Promise<void> => {
     setSaveStatus('saving')
@@ -359,6 +369,9 @@ export function DictManagerApp(): JSX.Element {
     window.addEventListener('click', close)
     return () => window.removeEventListener('click', close)
   }, [])
+
+  // アンマウント時に通知タイマーを掃除
+  useEffect(() => () => { if (noticeTimer.current) clearTimeout(noticeTimer.current) }, [])
 
   // showNewDict が true になったらフォーカス
   useEffect(() => {
@@ -581,17 +594,35 @@ export function DictManagerApp(): JSX.Element {
 
   // ── TSV ────────────────────────────────────────────────────────────────────
 
+  // 辞書ゼロ/未選択時の案内文（進入禁止ボタンの title と onClick ガードで共用）
+  const NO_DICT_HINT = '辞書がありません。先に「新規」で辞書を作成してください'
+
   const handleExportTsv = async () => {
-    if (!selectedDict) return
-    const result = await window.api.dict.exportTsv(selectedDict)
-    if (result.success) setSaveStatus('saved')
+    if (!selectedDict) { showNotice(NO_DICT_HINT, true); return }
+    try {
+      const result = await window.api.dict.exportTsv(selectedDict)
+      // success=false はダイアログのキャンセル（＝無反応でよい）
+      if (!result.success) return
+      showNotice(`「${selectedDict}」を書き出しました`)
+    } catch {
+      showNotice('書き出しに失敗しました', true)
+    }
   }
 
   const handleImportTsv = async () => {
-    if (!selectedDict) return
-    const result = await window.api.dict.importTsv(selectedDict)
-    if (result.success && result.count > 0) {
-      await reloadDictData(selectedDict, selectedReading)
+    if (!selectedDict) { showNotice(NO_DICT_HINT, true); return }
+    try {
+      const result = await window.api.dict.importTsv(selectedDict)
+      // success=false はダイアログのキャンセル（＝無反応でよい）
+      if (!result.success) return
+      if (result.count > 0) {
+        await reloadDictData(selectedDict, selectedReading)
+        showNotice(`「${selectedDict}」に ${result.count} 件 取り込みました`)
+      } else {
+        showNotice('取り込める項目がありませんでした（1行につき「読み[Tab]候補」の形式かご確認ください）', true)
+      }
+    } catch {
+      showNotice('取り込みに失敗しました', true)
     }
   }
 
@@ -609,9 +640,9 @@ export function DictManagerApp(): JSX.Element {
             <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--kg-text-secondary)', whiteSpace: 'nowrap' }}>辞書セット</span>
             <div style={{ display: 'flex', gap: 4 }}>
               <button style={PANE_BTN} title="新規" onClick={() => { setShowNewDict(true); setRenamingDict(null) }}>新規</button>
-              <button style={PANE_BTN} title="複製" disabled={!selectedDict} onClick={handleCopyDict}>複製</button>
-              <button style={PANE_BTN} title="名前変更" disabled={!selectedDict} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
-              <button style={PANE_BTN_DANGER} title="削除" disabled={!selectedDict} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
+              <button style={selectedDict ? PANE_BTN : { ...PANE_BTN, cursor: 'not-allowed', opacity: 0.45 }} title={selectedDict ? '複製' : '辞書を選択してください'} onClick={handleCopyDict}>複製</button>
+              <button style={selectedDict ? PANE_BTN : { ...PANE_BTN, cursor: 'not-allowed', opacity: 0.45 }} title={selectedDict ? '名前変更' : '辞書を選択してください'} onClick={() => selectedDict && setRenamingDict(selectedDict)}>改名</button>
+              <button style={selectedDict ? PANE_BTN_DANGER : { ...PANE_BTN_DANGER, cursor: 'not-allowed', opacity: 0.45 }} title={selectedDict ? '削除' : '辞書を選択してください'} onClick={() => selectedDict && handleDeleteDict(selectedDict)}>削除</button>
             </div>
           </div>
           {/* 優先度並べ替え（グローバル設定） */}
@@ -658,6 +689,12 @@ export function DictManagerApp(): JSX.Element {
                 </div>
               )
             })}
+            {/* 空状態ヒント */}
+            {dicts.length === 0 && !showNewDict && (
+              <div style={{ padding: '16px 10px', color: 'var(--kg-text-muted)', fontSize: 12, lineHeight: 1.5 }}>
+                辞書がありません。<br />「新規」で作成してください。
+              </div>
+            )}
             {/* 新規辞書インライン入力行 */}
             {showNewDict && (
               <div style={{ padding: '4px 8px', display: 'flex', gap: 4 }}>
@@ -904,18 +941,22 @@ export function DictManagerApp(): JSX.Element {
         fontSize: 12, flexShrink: 0
       }}>
         <button
-          style={{ ...PANE_BTN, fontSize: 12 }}
-          disabled={!selectedDict}
+          // native disabled はポインタイベント/title を抑止するため使わず「見た目無効」で実装
+          style={selectedDict ? { ...PANE_BTN, fontSize: 12 } : { ...PANE_BTN, fontSize: 12, cursor: 'not-allowed', opacity: 0.45 }}
           onClick={handleImportTsv}
-          title="TSV インポート（選択辞書対象）"
+          title={selectedDict ? 'TSV インポート（選択辞書対象）' : NO_DICT_HINT}
         >TSV インポート</button>
         <button
-          style={{ ...PANE_BTN, fontSize: 12 }}
-          disabled={!selectedDict}
+          style={selectedDict ? { ...PANE_BTN, fontSize: 12 } : { ...PANE_BTN, fontSize: 12, cursor: 'not-allowed', opacity: 0.45 }}
           onClick={handleExportTsv}
-          title="TSV エクスポート（選択辞書対象）"
+          title={selectedDict ? 'TSV エクスポート（選択辞書対象）' : NO_DICT_HINT}
         >TSV エクスポート</button>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, color: saveStatus === 'saving' ? 'var(--kg-text-muted)' : saveStatus === 'error' ? 'var(--kg-accent)' : 'var(--kg-text-secondary)' }}>
+        {notice && (
+          <span style={{ fontSize: 12, color: notice.error ? 'var(--kg-accent)' : 'var(--kg-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+            {notice.text}
+          </span>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: saveStatus === 'saving' ? 'var(--kg-text-muted)' : saveStatus === 'error' ? 'var(--kg-accent)' : 'var(--kg-text-secondary)' }}>
           {saveStatus === 'saving' ? (
             <span>保存中…</span>
           ) : saveStatus === 'error' ? (
