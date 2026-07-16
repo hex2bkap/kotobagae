@@ -426,6 +426,14 @@ function App(): JSX.Element {
       ]).then(([dicts, order]) => {
         setDictList(dicts)
         setPriorityOrder(order)
+        // 辞書削除に追随して各タブの有効辞書名を掃除（幽霊参照の除去＋新優先度で再ソート）。
+        // dictNames 配列だけ差し替え、他フィールド（editorState/filePath/dirty 等）は触らない。
+        setTabs((prev) =>
+          prev.map((t) => ({
+            ...t,
+            dictNames: sortByPriority(t.dictNames.filter((n) => dicts.includes(n)), order)
+          }))
+        )
       })
     })
   }, [])
@@ -1226,13 +1234,17 @@ function App(): JSX.Element {
         const session = await window.api.loadSession()
         if (!session || session.tabs.length === 0) { view.focus(); return }
 
+        // self-heal: session.json に焼き付いた幽霊辞書（実在しない辞書名）を復元時に落とす。
+        // dictList(state) は別 effect で遅延ロードされ順序保証が無いため、権威ある一覧を直接取得する。
+        const existingDicts = await window.api.dict.listDicts()
+
         const restoredTabs: Tab[] = []
         for (const st of session.tabs) {
           // M7移行: 旧セッション dictName(単一) → dictNames(配列) に変換
           const dictNames: string[] = (Array.isArray(st.dictNames)
             ? st.dictNames
             : st.dictName ? [st.dictName] : []
-          ).slice(0, MAX_ACTIVE_DICTS)
+          ).filter((n) => existingDicts.includes(n)).slice(0, MAX_ACTIVE_DICTS)
 
           if (!st.filePath) {
             restoredTabs.push({
