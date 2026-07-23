@@ -33,7 +33,9 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
 
     // アンダースコア始まりの識別子は「意図的に使わない」印として扱う。
-    // 例：_priorityOrder（将来用に残している定数）が未使用として誤検知されるのを防ぐ。
+    // 例：DictManagerApp.tsx の `const [_priorityOrder, setPriorityOrder] = useState(...)`
+    //     ＝ setter だけを使い、値そのものは参照しない state。値は未使用だが削除できない
+    //     （setter と対で存在するため）。これを未使用と誤検知させないための除外。
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
